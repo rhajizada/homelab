@@ -1,6 +1,4 @@
 locals {
-  payload            = jsondecode(file("${path.module}/payload.json"))
-  talos_schematic_id = jsondecode(data.http.talos_schematic_request.response_body).id
   control_nodes = [
     for i in range(var.vm_config["control"].count) : {
       name    = "${var.cluster_name}-ctrl-${i}"
@@ -15,36 +13,16 @@ locals {
   ]
 }
 
-data "http" "talos_schematic_request" {
-  url    = "https://factory.talos.dev/schematics"
-  method = "POST"
-
-  request_headers = {
-    "Content-Type" = "application/json"
-  }
-
-  request_body = jsonencode(local.payload)
-}
-
-resource "proxmox_virtual_environment_download_file" "talos_nocloud_image" {
-  content_type = "iso"
-  datastore_id = "local"
-  node_name    = var.proxmox_node_name
-
-  file_name = "talos-${var.talos_version}-nocloud-amd64.img"
-  url       = "https://factory.talos.dev/image/${local.talos_schematic_id}/v${var.talos_version}/nocloud-amd64.iso"
-}
-
 
 resource "proxmox_virtual_environment_vm" "control_plane" {
-  count           = var.vm_config["control"].count
-  name            = local.control_nodes[count.index].name
-  node_name       = var.proxmox_node_name
-  tags            = sort([var.cluster_name, "talos", "control", "terraform"])
-  stop_on_destroy = true
-  bios            = "ovmf"
-  machine         = "q35"
-  scsi_hardware   = "virtio-scsi-single"
+  count     = var.vm_config["control"].count
+  name      = local.control_nodes[count.index].name
+  node_name = var.proxmox_node_name
+  tags      = sort([var.cluster_name, "talos", "control", "terraform"])
+  # stop_on_destroy = true
+  bios          = "ovmf"
+  machine       = "q35"
+  scsi_hardware = "virtio-scsi-single"
   operating_system {
     type = "l26"
   }
@@ -94,14 +72,14 @@ resource "proxmox_virtual_environment_vm" "control_plane" {
 }
 
 resource "proxmox_virtual_environment_vm" "worker" {
-  count           = var.vm_config["worker"].count
-  name            = local.worker_nodes[count.index].name
-  node_name       = var.proxmox_node_name
-  tags            = sort([var.cluster_name, "talos", "worker", "terraform"])
-  stop_on_destroy = true
-  bios            = "ovmf"
-  machine         = "q35"
-  scsi_hardware   = "virtio-scsi-single"
+  count     = var.vm_config["worker"].count
+  name      = local.worker_nodes[count.index].name
+  node_name = var.proxmox_node_name
+  tags      = sort([var.cluster_name, "talos", "worker", "terraform"])
+  # stop_on_destroy = true
+  bios          = "ovmf"
+  machine       = "q35"
+  scsi_hardware = "virtio-scsi-single"
   operating_system {
     type = "l26"
   }

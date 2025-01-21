@@ -2,6 +2,7 @@
   "customization": {
     "systemExtensions": {
       "officialExtensions": [
+        "siderolabs/drbd",
         "siderolabs/gvisor",
         "siderolabs/intel-ucode",
         "siderolabs/iscsi-tools",

@@ -63,7 +63,7 @@ variable "vm_config" {
         iothread     = true
         ssd          = true
         discard      = "on"
-        size         = 32
+        size         = 64
         file_format  = "raw"
       }
       efi_disk = {
