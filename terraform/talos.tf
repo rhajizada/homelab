@@ -13,6 +13,11 @@ locals {
           forwardKubeDNSToHost = true
         }
       }
+      kubelet = {
+        extraArgs = {
+          rotate-server-certificates = true
+        }
+      }
     }
   }
 }
@@ -30,7 +35,15 @@ data "talos_machine_configuration" "control" {
   examples         = false
   docs             = false
   config_patches = [
-    yamlencode(local.common_machine_config)
+    yamlencode(local.common_machine_config),
+    yamlencode({
+      cluster = {
+        extraManifests = [
+          "https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml",
+          "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
+        ]
+      }
+    })
   ]
 }
 
