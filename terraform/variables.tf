@@ -18,6 +18,11 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "environment" {
+  description = "Environment name (e.g dev/staging/prod)"
+  type        = string
+}
+
 variable "cluster_node_network_gateway" {
   description = "The IP network gateway of the cluster nodes"
   type        = string

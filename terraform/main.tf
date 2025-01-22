@@ -1,13 +1,13 @@
 locals {
   control_nodes = [
     for i in range(var.vm_config["control"].count) : {
-      name    = "${var.cluster_name}-ctrl-${i}"
+      name    = "${var.cluster_name}-${var.environment}-ctrl-${i}"
       address = cidrhost(var.cluster_node_network, var.vm_config["control"].first_hostnum + i)
     }
   ]
   worker_nodes = [
     for i in range(var.vm_config["worker"].count) : {
-      name    = "${var.cluster_name}-worker-${i}"
+      name    = "${var.cluster_name}-${var.environment}-worker-${i}"
       address = cidrhost(var.cluster_node_network, var.vm_config["worker"].first_hostnum + i)
     }
   ]
@@ -15,14 +15,14 @@ locals {
 
 
 resource "proxmox_virtual_environment_vm" "control_plane" {
-  count     = var.vm_config["control"].count
-  name      = local.control_nodes[count.index].name
-  node_name = var.proxmox_node_name
-  tags      = sort([var.cluster_name, "talos", "control", "terraform"])
-  # stop_on_destroy = true
-  bios          = "ovmf"
-  machine       = "q35"
-  scsi_hardware = "virtio-scsi-single"
+  count           = var.vm_config["control"].count
+  name            = local.control_nodes[count.index].name
+  node_name       = var.proxmox_node_name
+  tags            = sort([var.cluster_name, var.environment, "talos", "control", "terraform"])
+  stop_on_destroy = true
+  bios            = "ovmf"
+  machine         = "q35"
+  scsi_hardware   = "virtio-scsi-single"
   operating_system {
     type = "l26"
   }
@@ -58,8 +58,8 @@ resource "proxmox_virtual_environment_vm" "control_plane" {
     file_id      = proxmox_virtual_environment_download_file.talos_nocloud_image.id
   }
   agent {
-    enabled = true
-    trim    = true
+    enabled = false
+    trim    = false
   }
   initialization {
     ip_config {
@@ -72,14 +72,14 @@ resource "proxmox_virtual_environment_vm" "control_plane" {
 }
 
 resource "proxmox_virtual_environment_vm" "worker" {
-  count     = var.vm_config["worker"].count
-  name      = local.worker_nodes[count.index].name
-  node_name = var.proxmox_node_name
-  tags      = sort([var.cluster_name, "talos", "worker", "terraform"])
-  # stop_on_destroy = true
-  bios          = "ovmf"
-  machine       = "q35"
-  scsi_hardware = "virtio-scsi-single"
+  count           = var.vm_config["worker"].count
+  name            = local.worker_nodes[count.index].name
+  node_name       = var.proxmox_node_name
+  tags            = sort([var.cluster_name, var.environment, "talos", "worker", "terraform"])
+  stop_on_destroy = true
+  bios            = "ovmf"
+  machine         = "q35"
+  scsi_hardware   = "virtio-scsi-single"
   operating_system {
     type = "l26"
   }
@@ -115,8 +115,8 @@ resource "proxmox_virtual_environment_vm" "worker" {
     file_id      = proxmox_virtual_environment_download_file.talos_nocloud_image.id
   }
   agent {
-    enabled = true
-    trim    = true
+    enabled = false
+    trim    = false
   }
   initialization {
     ip_config {

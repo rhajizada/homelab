@@ -14,3 +14,20 @@ output "kubeconfig" {
   value       = talos_cluster_kubeconfig.talos.kubeconfig_raw
 }
 
+output "talos_ca_certificate" {
+  description = "Talos CA certificate"
+  sensitive   = true
+  value       = talos_machine_secrets.cluster.client_configuration.ca_certificate
+}
+
+output "talos_client_key" {
+  description = "Talos client key"
+  sensitive   = true
+  value       = talos_machine_secrets.cluster.client_configuration.client_key
+}
+
+output "talos_client_certificate" {
+  description = "Talos client key"
+  sensitive   = true
+  value       = talos_machine_secrets.cluster.client_configuration.client_certificate
+}
