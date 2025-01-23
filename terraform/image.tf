@@ -1,17 +1,30 @@
-locals {
-  schematic          = jsondecode(file("${path.module}/schematic.json"))
-  talos_schematic_id = jsondecode(data.http.talos_schematic_request.response_body).id
+data "talos_image_factory_extensions_versions" "this" {
+  talos_version = var.talos_version
+  filters = {
+    names = keys(var.talos_extensions)
+  }
 }
 
-data "http" "talos_schematic_request" {
-  url    = "https://factory.talos.dev/schematics"
-  method = "POST"
+resource "talos_image_factory_schematic" "this" {
+  schematic = yamlencode(
+    {
+      customization = {
+        systemExtensions = {
+          officialExtensions = data.talos_image_factory_extensions_versions.this.extensions_info[*].name
+        }
+      }
+    }
+  )
+}
 
-  request_headers = {
-    "Content-Type" = "application/json"
-  }
+output "schematic_id" {
+  value = talos_image_factory_schematic.this.id
+}
 
-  request_body = jsonencode(local.schematic)
+data "talos_image_factory_urls" "this" {
+  talos_version = var.talos_version
+  schematic_id  = talos_image_factory_schematic.this.id
+  platform      = "nocloud"
 }
 
 resource "proxmox_virtual_environment_download_file" "talos_nocloud_image" {
@@ -20,5 +33,5 @@ resource "proxmox_virtual_environment_download_file" "talos_nocloud_image" {
   node_name    = var.proxmox_node_name
 
   file_name = "talos-${var.talos_version}-nocloud-amd64.img"
-  url       = "https://factory.talos.dev/image/${local.talos_schematic_id}/v${var.talos_version}/nocloud-amd64.iso"
+  url       = data.talos_image_factory_urls.this.urls.iso
 }

@@ -4,11 +4,8 @@ locals {
     machine = {
       install = {
         extensions = [
-          {
-            image = "ghcr.io/siderolabs/intel-ucode:20241112"
-          },
-          {
-            image = "ghcr.io/siderolabs/qemu-guest-agent:9.2.0"
+          for name, version in var.talos_extensions : {
+            image = "ghcr.io/siderolabs/${name}:${version}"
           }
         ]
       }
@@ -29,14 +26,14 @@ locals {
 }
 
 resource "talos_machine_secrets" "cluster" {
-  talos_version = "v${var.talos_version}"
+  talos_version = var.talos_version
 }
 
 data "talos_machine_configuration" "control" {
   cluster_name     = var.cluster_name
   machine_type     = "controlplane"
   cluster_endpoint = local.cluster_endpoint
-  talos_version    = "v${var.talos_version}"
+  talos_version    = var.talos_version
   machine_secrets  = talos_machine_secrets.cluster.machine_secrets
   examples         = false
   docs             = false
@@ -57,7 +54,7 @@ data "talos_machine_configuration" "worker" {
   cluster_name     = var.cluster_name
   machine_type     = "worker"
   cluster_endpoint = local.cluster_endpoint
-  talos_version    = "v${var.talos_version}"
+  talos_version    = var.talos_version
   machine_secrets  = talos_machine_secrets.cluster.machine_secrets
   config_patches = [
     yamlencode(local.common_machine_config)

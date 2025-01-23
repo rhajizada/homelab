@@ -8,10 +8,6 @@ variable "proxmox_node_name" {
   type        = string
 }
 
-variable "talos_version" {
-  description = "Version of Talos to install"
-  type        = string
-}
 
 variable "cluster_name" {
   description = "Talos cluster name"
@@ -21,6 +17,22 @@ variable "cluster_name" {
 variable "environment" {
   description = "Environment name (e.g dev/staging/prod)"
   type        = string
+}
+
+variable "talos_version" {
+  description = "Version of Talos to install"
+  type        = string
+  default     = "v1.9.2"
+}
+
+#  please see https://github.com/siderolabs/extensions?tab=readme-ov-file#installing-extensions
+variable "talos_extensions" {
+  description = "Map of Talos extension name to a specific version"
+  type        = map(string)
+  default = {
+    "intel-ucode"      = "20241112"
+    "qemu-guest-agent" = "9.2.0"
+  }
 }
 
 variable "cluster_node_network_gateway" {
@@ -81,7 +93,7 @@ variable "vm_config" {
       network       = "vmbr0"
     }
     worker = {
-      count = 2
+      count = 1
       cpu   = 2
       disk = {
         datastore_id = "local-lvm"
