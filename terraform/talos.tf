@@ -2,10 +2,16 @@ locals {
   cluster_endpoint = "https://${local.control_nodes[0].address}:6443"
   common_machine_config = {
     machine = {
-      # NB the install section changes are only applied after a talos upgrade
-      #    (which we do not do). instead, its preferred to create a custom
-      #    talos image, which is created in the installed state.
-      #install = {}
+      install = {
+        extensions = [
+          {
+            image = "ghcr.io/siderolabs/intel-ucode:20241112"
+          },
+          {
+            image = "ghcr.io/siderolabs/qemu-guest-agent:9.2.0"
+          }
+        ]
+      }
       features = {
         # see https://www.talos.dev/v1.8/talos-guides/network/host-dns/
         hostDNS = {

@@ -58,8 +58,8 @@ resource "proxmox_virtual_environment_vm" "control_plane" {
     file_id      = proxmox_virtual_environment_download_file.talos_nocloud_image.id
   }
   agent {
-    enabled = false
-    trim    = false
+    enabled = true
+    trim    = true
   }
   initialization {
     ip_config {
@@ -115,8 +115,8 @@ resource "proxmox_virtual_environment_vm" "worker" {
     file_id      = proxmox_virtual_environment_download_file.talos_nocloud_image.id
   }
   agent {
-    enabled = false
-    trim    = false
+    enabled = true
+    trim    = true
   }
   initialization {
     ip_config {
