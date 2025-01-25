@@ -14,7 +14,7 @@ locals {
 }
 
 
-resource "proxmox_virtual_environment_vm" "control_plane" {
+resource "proxmox_virtual_environment_vm" "talos_control_plane" {
   count           = var.vm_config["control"].count
   name            = local.control_nodes[count.index].name
   node_name       = var.proxmox_node_name
@@ -65,13 +65,13 @@ resource "proxmox_virtual_environment_vm" "control_plane" {
     ip_config {
       ipv4 {
         address = "${local.control_nodes[count.index].address}/24"
-        gateway = var.cluster_node_network_gateway
+        gateway = var.cluster_network_gateway
       }
     }
   }
 }
 
-resource "proxmox_virtual_environment_vm" "worker" {
+resource "proxmox_virtual_environment_vm" "talos_worker" {
   count           = var.vm_config["worker"].count
   name            = local.worker_nodes[count.index].name
   node_name       = var.proxmox_node_name
@@ -122,7 +122,7 @@ resource "proxmox_virtual_environment_vm" "worker" {
     ip_config {
       ipv4 {
         address = "${local.worker_nodes[count.index].address}/24"
-        gateway = var.cluster_node_network_gateway
+        gateway = var.cluster_network_gateway
       }
     }
   }

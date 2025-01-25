@@ -4,7 +4,7 @@ locals {
     machine = {
       install = {
         extensions = [
-          for name, version in var.talos_extensions : {
+          for name, version in var.extensions : {
             image = "ghcr.io/siderolabs/${name}:${version}"
           }
         ]
@@ -92,7 +92,7 @@ resource "talos_machine_configuration_apply" "control" {
     })
   ]
   depends_on = [
-    proxmox_virtual_environment_vm.control_plane,
+    proxmox_virtual_environment_vm.talos_control_plane,
   ]
 }
 
@@ -113,7 +113,7 @@ resource "talos_machine_configuration_apply" "worker" {
     }),
   ]
   depends_on = [
-    proxmox_virtual_environment_vm.worker,
+    proxmox_virtual_environment_vm.talos_worker,
   ]
 }
 
