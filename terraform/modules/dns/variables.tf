@@ -19,11 +19,9 @@ variable "environment" {
   type        = string
 }
 
-# can be found in https://geo.mirror.pkgbuild.com/images/
-variable "archlinux_version" {
-  description = "Version of Archlinx to deploy for DNS VM"
+variable "ubuntu_image" {
+  description = "Ubuntu Cloud Image ID"
   type        = string
-  default     = "20250115.298549"
 }
 
 variable "cluster_network_gateway" {
@@ -36,6 +34,16 @@ variable "cluster_node_network" {
   description = "The IP network of the cluster nodes"
   type        = string
   default     = "192.168.1.1/24"
+}
+
+variable "dns_entries" {
+  description = "List of DNS subdomains and IPs"
+  type = list(object({
+    name  = string
+    type  = string
+    value = string
+  }))
+  default = []
 }
 
 variable "vm_config" {

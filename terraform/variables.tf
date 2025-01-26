@@ -78,6 +78,12 @@ variable "talos_vm_config" {
   }))
 }
 
+variable "ubuntu_version" {
+  description = "Version of Ubuntu to deploy for VPN VM"
+  type        = string
+  default     = "noble"
+}
+
 variable "vpn_vm_config" {
   description = "Configuration for VPN node VMs"
   type = object({
@@ -108,7 +114,7 @@ variable "vpn_vm_config" {
       iothread     = true
       ssd          = true
       discard      = "on"
-      size         = 16
+      size         = 32
       file_format  = "raw"
     }
     efi_disk = {
@@ -152,7 +158,7 @@ variable "dns_vm_config" {
       iothread     = true
       ssd          = true
       discard      = "on"
-      size         = 16
+      size         = 32
       file_format  = "raw"
     }
     efi_disk = {

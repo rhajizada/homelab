@@ -22,15 +22,7 @@ module "vpn" {
   proxmox_node_name = var.proxmox_node_name
   vm_config         = var.vpn_vm_config
   dns_name          = local.vpn_dns_name
-}
-
-module "route53" {
-  source       = "./modules/route53"
-  count        = var.base_domain != "" ? 1 : 0
-  cluster_name = var.cluster_name
-  environment  = var.environment
-  base_domain  = var.base_domain
-  dns_name     = local.vpn_dns_name
+  ubuntu_image      = proxmox_virtual_environment_download_file.ubuntu_image.id
 }
 
 module "dns" {
@@ -40,4 +32,14 @@ module "dns" {
   proxmox_endpoint  = var.proxmox_endpoint
   proxmox_node_name = var.proxmox_node_name
   vm_config         = var.dns_vm_config
+  ubuntu_image      = proxmox_virtual_environment_download_file.ubuntu_image.id
+}
+
+module "route53" {
+  source       = "./modules/route53"
+  count        = var.base_domain != "" ? 1 : 0
+  cluster_name = var.cluster_name
+  environment  = var.environment
+  base_domain  = var.base_domain
+  dns_name     = local.vpn_dns_name
 }

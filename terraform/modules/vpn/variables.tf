@@ -25,11 +25,12 @@ variable "environment" {
   type        = string
 }
 
-variable "ubuntu_version" {
-  description = "Version of Ubuntu to deploy for VPN VM"
+
+variable "ubuntu_image" {
+  description = "Ubuntu Cloud Image ID"
   type        = string
-  default     = "noble"
 }
+
 
 variable "cluster_network_gateway" {
   description = "The IP network gateway of the cluster nodes"
@@ -73,7 +74,7 @@ variable "vm_config" {
       iothread     = true
       ssd          = true
       discard      = "on"
-      size         = 16
+      size         = 32
       file_format  = "raw"
     }
     efi_disk = {

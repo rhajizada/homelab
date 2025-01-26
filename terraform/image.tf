@@ -13,4 +13,3 @@ resource "proxmox_virtual_environment_download_file" "ubuntu_image" {
   file_name = local.image.file_name
   url       = local.image.url
 }
-

@@ -5,13 +5,13 @@ terraform {
       source  = "bpg/proxmox"
       version = "0.70.0"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "3.4.5"
+    }
     tls = {
       source  = "hashicorp/tls"
       version = "4.0.6"
-    }
-    wireguard = {
-      source  = "OJFord/wireguard"
-      version = "0.3.1"
     }
   }
 }
@@ -24,4 +24,3 @@ provider "proxmox" {
     agent = true
   }
 }
-

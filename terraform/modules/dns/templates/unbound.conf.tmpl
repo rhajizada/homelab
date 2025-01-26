@@ -1,0 +1,16 @@
+server:
+  verbosity: 1
+  interface: 0.0.0.0
+  access-control: 0.0.0.0/0 allow
+  do-not-query-localhost: no
+
+  # DNS entries
+%{ for entry in dns_entries ~}
+  local-data: "${entry.name} ${entry.type} ${entry.value}"
+%{ endfor ~}
+
+  forward-zone:
+    name: "."
+    forward-addr: 8.8.8.8
+    forward-addr: 8.8.4.4
+

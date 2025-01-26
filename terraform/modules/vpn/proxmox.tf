@@ -4,11 +4,11 @@ locals {
     username = "root"
   }
   wireguard_configuration = {
-    server = templatefile("${path.module}/templates/wireguard/server-config.tpl", {
+    server = templatefile("${path.module}/templates/wg0.conf.tmpl", {
       server_private_key = wireguard_asymmetric_key.server.private_key,
       client_public_key  = wireguard_asymmetric_key.client.public_key
     })
-    client = templatefile("${path.module}/templates/wireguard/client-config.tpl", {
+    client = templatefile("${path.module}/templates/client.conf.tmpl", {
       client_private_key      = wireguard_asymmetric_key.client.private_key,
       server_public_key       = wireguard_asymmetric_key.server.public_key,
       cluster_network_gateway = var.cluster_network_gateway,
@@ -44,15 +44,15 @@ resource "proxmox_virtual_environment_file" "vpn_user_data" {
       #cloud-config
       hostname: ${local.vpn_node.name}
       users:
-        - default
         - name: ${local.vpn_node.username}
           groups:
             - sudo
           shell: /bin/bash
           ssh_authorized_keys:
             - ${tls_private_key.root_ssh.public_key_openssh}
-          ssh_pwauth: False
           sudo: ALL=(ALL) NOPASSWD:ALL
+          lock_passwd: true
+      ssh_pwauth: false
       write_files:
         - content: |
             ${indent(6, local.wireguard_configuration.server)}
@@ -64,8 +64,8 @@ resource "proxmox_virtual_environment_file" "vpn_user_data" {
           permissions: '0600'
       runcmd:
         - apt update
+        - apt upgrade
         - apt install -y qemu-guest-agent net-tools wireguard
-        - timedatectl set-timezone America/New_York
         - systemctl enable qemu-guest-agent
         - systemctl start qemu-guest-agent
         - echo "net.ipv4.ip_forward=1" | tee -a /etc/sysctl.conf
@@ -122,7 +122,7 @@ resource "proxmox_virtual_environment_vm" "vpn_node" {
     discard      = var.vm_config.disk.discard
     size         = var.vm_config.disk.size
     file_format  = var.vm_config.disk.file_format
-    file_id      = proxmox_virtual_environment_download_file.ubuntu_image.id
+    file_id      = var.ubuntu_image
   }
   agent {
     enabled = true

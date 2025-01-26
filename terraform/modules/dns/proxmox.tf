@@ -3,8 +3,12 @@ locals {
     name     = "${var.cluster_name}-${var.environment}-dns"
     username = "root"
   }
-}
+  unbound_configuration = templatefile("${path.module}/templates/unbound.conf.tmpl", {
+    dns_entries = var.dns_entries
+  })
 
+  resolved_configuration = templatefile("${path.module}/templates/resolved.conf.tmpl", {})
+}
 
 resource "tls_private_key" "root_ssh" {
   algorithm = "RSA"
@@ -12,7 +16,6 @@ resource "tls_private_key" "root_ssh" {
 }
 
 resource "proxmox_virtual_environment_file" "dns_user_data" {
-
   depends_on = [
     tls_private_key.root_ssh
   ]
@@ -34,12 +37,28 @@ resource "proxmox_virtual_environment_file" "dns_user_data" {
           sudo: ALL=(ALL) NOPASSWD:ALL
           lock_passwd: true
       ssh_pwauth: false
+      write_files:
+        - content: |
+            ${indent(6, local.unbound_configuration)}
+          path: /etc/unbound/unbound.conf
+          permissions: '0644'
+        - content: |
+            ${indent(6, local.resolved_configuration)}
+          path: /etc/systemd/resolved.conf
+          permissions: '0644'
       runcmd:
-        -  update
-        - pacman -Syu
-        - pacman -S qemu-guest-agent net-tools
-        - systemctl enable qemu-ga
-        - systemctl start qemu-ga
+        - apt update
+        - apt upgrade
+        - apt install -y qemu-guest-agent unbound
+        - groupadd -r unbound
+        - useradd -r -g unbound -s /usr/sbin/nologin unbound
+        - chown -R unbound:unbound /etc/unbound
+        - chmod -R 750 /etc/unbound
+        - systemctl enable qemu-guest-agent
+        - systemctl start qemu-guest-agent
+        - systemctl restart systemd-resolved
+        - systemctl enable unbound
+        - systemctl restart unbound
         - echo "done" > /tmp/cloud-config.done
     EOF
 
@@ -53,7 +72,7 @@ resource "proxmox_virtual_environment_vm" "dns_node" {
   ]
   name            = local.dns_node.name
   node_name       = var.proxmox_node_name
-  tags            = sort([var.cluster_name, var.environment, "archlinux", "dns", "terraform"])
+  tags            = sort([var.cluster_name, var.environment, "ubuntu", "dns", "terraform"])
   stop_on_destroy = true
   bios            = "ovmf"
   machine         = "q35"
@@ -90,7 +109,7 @@ resource "proxmox_virtual_environment_vm" "dns_node" {
     discard      = var.vm_config.disk.discard
     size         = var.vm_config.disk.size
     file_format  = var.vm_config.disk.file_format
-    file_id      = proxmox_virtual_environment_download_file.archlinux_image.id
+    file_id      = var.ubuntu_image
   }
   agent {
     enabled = true
@@ -107,4 +126,3 @@ resource "proxmox_virtual_environment_vm" "dns_node" {
     user_data_file_id = proxmox_virtual_environment_file.dns_user_data.id
   }
 }
-

@@ -29,6 +29,12 @@ destroy:
 	terraform -chdir=terraform destroy -var-file=$(VAR_FILE)
 
 
+.PHONY: format
+## format: Format terraform code
+format:
+	terraform -chdir=terraform fmt -recursive .
+
+
 .PHONY: kubeconfig
 ## kubeconfig: Generate kubeconfig
 kubeconfig:
