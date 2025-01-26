@@ -121,3 +121,47 @@ variable "vpn_vm_config" {
     ip      = "192.168.1.80"
   }
 }
+
+variable "dns_vm_config" {
+  description = "Configuration for DNS node VMs"
+  type = object({
+    cpu = number
+    disk = object({
+      datastore_id = string
+      interface    = string
+      iothread     = bool
+      ssd          = bool
+      discard      = string
+      size         = number
+      file_format  = string
+    })
+    efi_disk = object({
+      datastore_id = string
+      file_format  = string
+      type         = string
+    })
+    memory  = number
+    network = string
+    ip      = string
+  })
+  default = {
+    cpu = 1
+    disk = {
+      datastore_id = "local-lvm"
+      interface    = "scsi0"
+      iothread     = true
+      ssd          = true
+      discard      = "on"
+      size         = 16
+      file_format  = "raw"
+    }
+    efi_disk = {
+      datastore_id = "local-lvm"
+      file_format  = "raw"
+      type         = "4m"
+    }
+    memory  = 2048
+    network = "vmbr0"
+    ip      = "192.168.1.90"
+  }
+}

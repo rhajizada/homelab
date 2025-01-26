@@ -1,6 +1,8 @@
 NAME := homelab
 VAR_FILE := dev.tfvars
 VPN_SSH_KEY := $(HOME)/.ssh/vpn.rsa
+DNS_SSH_KEY := $(HOME)/.ssh/dns.rsa
+
 
 
 .PHONY: init
@@ -48,6 +50,17 @@ ssh-vpn:
 	IP_ADDR=$$(terraform -chdir=terraform output -json vpn_node_ip | jq -r .); \
 	ssh-keygen -R $${IP_ADDR}; \
 	ssh -i $(VPN_SSH_KEY) $${USERNAME}@$${IP_ADDR}
+
+
+.PHONY: ssh-dns
+## ssh-dns: Generate SSH key for DNS node
+ssh-dns:
+	terraform -chdir=terraform output -json dns_node_credentials | jq -r .ssh_private_key > $(DNS_SSH_KEY); \
+	chmod 0600 $(DNS_SSH_KEY); \
+	USERNAME=$$(terraform -chdir=terraform output -json dns_node_credentials | jq -r .username); \
+	IP_ADDR=$$(terraform -chdir=terraform output -json dns_node_ip | jq -r .); \
+	ssh-keygen -R $${IP_ADDR}; \
+	ssh -i $(DNS_SSH_KEY) $${USERNAME}@$${IP_ADDR}
 
 
 .PHONY: help

@@ -37,3 +37,15 @@ output "wireguard_client_configuration" {
   sensitive   = true
   value       = module.vpn.wireguard_client_configuration
 }
+
+output "dns_node_ip" {
+  description = "IP Address of DNS node"
+  sensitive   = false
+  value       = module.dns.ip_address
+}
+
+output "dns_node_credentials" {
+  description = "DNS node credentials"
+  sensitive   = true
+  value       = module.dns.credentials
+}

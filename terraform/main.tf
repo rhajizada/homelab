@@ -32,3 +32,12 @@ module "route53" {
   base_domain  = var.base_domain
   dns_name     = local.vpn_dns_name
 }
+
+module "dns" {
+  source            = "./modules/dns"
+  cluster_name      = var.cluster_name
+  environment       = var.environment
+  proxmox_endpoint  = var.proxmox_endpoint
+  proxmox_node_name = var.proxmox_node_name
+  vm_config         = var.dns_vm_config
+}
