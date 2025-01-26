@@ -53,7 +53,7 @@ resource "proxmox_virtual_environment_vm" "dns_node" {
   ]
   name            = local.dns_node.name
   node_name       = var.proxmox_node_name
-  tags            = sort([var.cluster_name, var.environment, "alpine", "dns", "terraform"])
+  tags            = sort([var.cluster_name, var.environment, "archlinux", "dns", "terraform"])
   stop_on_destroy = true
   bios            = "ovmf"
   machine         = "q35"
