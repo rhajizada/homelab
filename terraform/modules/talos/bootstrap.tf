@@ -1,5 +1,5 @@
 locals {
-  cluster_endpoint = "https://${local.control_nodes[0].address}:6443"
+  cluster_endpoint = "https://${var.kube_vip}:6443"
   common_machine_config = {
     machine = {
       install = {
@@ -23,6 +23,19 @@ locals {
       }
     }
   }
+  control_plane_machine_config = {
+    machine = {
+      network = {
+        interfaces = [{
+          interface = "eth0"
+          dhcp      = true
+          vip = {
+            ip = var.kube_vip
+          }
+        }]
+      }
+    }
+  }
 }
 
 resource "talos_machine_secrets" "cluster" {
@@ -39,6 +52,7 @@ data "talos_machine_configuration" "control" {
   docs             = false
   config_patches = [
     yamlencode(local.common_machine_config),
+    yamlencode(local.control_plane_machine_config),
     yamlencode({
       cluster = {
         extraManifests = [
@@ -69,8 +83,8 @@ data "talos_client_configuration" "talos" {
 
 resource "talos_cluster_kubeconfig" "talos" {
   client_configuration = talos_machine_secrets.cluster.client_configuration
-  endpoint             = local.control_nodes[0].address
-  node                 = local.control_nodes[0].address
+  endpoint             = var.kube_vip
+  node                 = var.kube_vip
   depends_on = [
     talos_machine_bootstrap.talos,
   ]
@@ -119,7 +133,7 @@ resource "talos_machine_configuration_apply" "worker" {
 
 resource "talos_machine_bootstrap" "talos" {
   client_configuration = talos_machine_secrets.cluster.client_configuration
-  endpoint             = local.control_nodes[0].address
+  endpoint             = var.kube_vip
   node                 = local.control_nodes[0].address
   depends_on = [
     talos_machine_configuration_apply.control,

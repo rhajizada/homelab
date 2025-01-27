@@ -21,3 +21,14 @@ resource "aws_route53_record" "vpn" {
   ttl     = 300
   records = [jsondecode(data.http.current_ip.response_body).ip]
 }
+
+resource "aws_route53domains_registered_domain" "domain" {
+  domain_name = var.base_domain
+
+  dynamic "name_server" {
+    for_each = aws_route53_zone.main.name_servers
+    content {
+      name = name_server.value
+    }
+  }
+}
