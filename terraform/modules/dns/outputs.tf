@@ -1,7 +1,7 @@
 output "ip_address" {
   description = "IP Address of DNS node"
   sensitive   = false
-  value       = var.vm_config.ip
+  value       = var.ip_address
 }
 
 output "credentials" {

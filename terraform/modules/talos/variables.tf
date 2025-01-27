@@ -1,4 +1,15 @@
+variable "proxmox_endpoint" {
+  description = "Proxmox host endpoint"
+  type        = string
+}
+
+variable "proxmox_node_name" {
+  description = "Proxmox node name"
+  type        = string
+}
+
 variable "cluster_name" {
+
   description = "Cluster name"
   type        = string
 }
@@ -27,23 +38,25 @@ variable "extensions" {
   }
 }
 
-
-variable "proxmox_endpoint" {
-  description = "Proxmox host endpoint"
-  type        = string
-}
-
-variable "proxmox_node_name" {
-  description = "Proxmox node name"
-  type        = string
-}
-
 variable "talos_version" {
   description = "Version of Talos to deploy"
   type        = string
 }
 
+variable "kube_vip" {
+  description = "Talos Kubernetes VIP"
+  type        = string
+}
 
+variable "control_node_ips" {
+  description = "List of control node IP adresses"
+  type        = list(any)
+}
+
+variable "worker_node_ips" {
+  description = "List of worker node IP adresses"
+  type        = list(any)
+}
 
 variable "vm_config" {
   description = "Configuration for worker and control node VMs"

@@ -1,3 +1,8 @@
+output "kube_vip" {
+  description = "Kubernetes VIP"
+  value       = var.kube_vip
+}
+
 output "control_plane_ips" {
   description = "IP addresses of the control plane nodes"
   value       = [for node in local.control_nodes : node.address]
@@ -23,3 +28,4 @@ output "talos_credentials" {
     client_certificate = talos_machine_secrets.cluster.client_configuration.client_certificate
   }
 }
+

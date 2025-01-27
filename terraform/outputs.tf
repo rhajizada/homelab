@@ -1,6 +1,16 @@
+output "talos_kube_vip" {
+  description = "Talos Kubernets VIP"
+  value       = module.talos.kube_vip
+}
+
 output "talos_control_plane_ips" {
   description = "IP addresses of the control plane nodes"
   value       = module.talos.control_plane_ips
+}
+
+output "talos_worker_ips" {
+  description = "IP addresses of the worker nodes"
+  value       = module.talos.worker_ips
 }
 
 output "talos_credentials" {
@@ -13,11 +23,6 @@ output "talos_kubeconfig" {
   description = "K8s cluster kubeconfig"
   sensitive   = true
   value       = module.talos.kubeconfig
-}
-
-output "talos_worker_ips" {
-  description = "IP addresses of the worker nodes"
-  value       = module.talos.worker_ips
 }
 
 output "vpn_node_ip" {

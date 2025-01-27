@@ -2,13 +2,13 @@ locals {
   control_nodes = [
     for i in range(var.vm_config["control"].count) : {
       name    = "${var.cluster_name}-${var.environment}-ctrl-${i}"
-      address = cidrhost(var.cluster_node_network, var.vm_config["control"].first_hostnum + i)
+      address = var.control_node_ips[i]
     }
   ]
   worker_nodes = [
     for i in range(var.vm_config["worker"].count) : {
       name    = "${var.cluster_name}-${var.environment}-worker-${i}"
-      address = cidrhost(var.cluster_node_network, var.vm_config["worker"].first_hostnum + i)
+      address = var.worker_node_ips[i]
     }
   ]
 }

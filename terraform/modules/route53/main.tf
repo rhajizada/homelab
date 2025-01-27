@@ -6,7 +6,7 @@ locals {
 }
 
 data "http" "current_ip" {
-  url = "http://ifconfig.me/ip"
+  url = "https://api.ipify.org?format=json"
 }
 
 resource "aws_route53_zone" "main" {
@@ -19,5 +19,5 @@ resource "aws_route53_record" "vpn" {
   name    = var.dns_name
   type    = "A"
   ttl     = 300
-  records = [chomp(data.http.current_ip.response_body)]
+  records = [jsondecode(data.http.current_ip.response_body).ip]
 }

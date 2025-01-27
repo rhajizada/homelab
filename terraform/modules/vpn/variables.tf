@@ -14,10 +14,14 @@ variable "cluster_name" {
   type        = string
 }
 
-variable "dns_name" {
-  description = "VPN server dns"
+variable "cluster_network_gateway" {
+  description = "The IP network gateway of the cluster nodes"
   type        = string
-  default     = ""
+}
+
+variable "cluster_node_network" {
+  description = "The IP network of the cluster nodes"
+  type        = string
 }
 
 variable "environment" {
@@ -25,23 +29,20 @@ variable "environment" {
   type        = string
 }
 
-
 variable "ubuntu_image" {
   description = "Ubuntu Cloud Image ID"
   type        = string
 }
 
-
-variable "cluster_network_gateway" {
-  description = "The IP network gateway of the cluster nodes"
+variable "dns_name" {
+  description = "VPN server dns"
   type        = string
-  default     = "192.168.1.1"
+  default     = ""
 }
 
-variable "cluster_node_network" {
-  description = "The IP network of the cluster nodes"
+variable "ip_address" {
+  description = "IP adress of VPN VM"
   type        = string
-  default     = "192.168.1.1/24"
 }
 
 variable "vm_config" {
@@ -64,7 +65,6 @@ variable "vm_config" {
     })
     memory  = number
     network = string
-    ip      = string
   })
   default = {
     cpu = 1
@@ -84,6 +84,5 @@ variable "vm_config" {
     }
     memory  = 2048
     network = "vmbr0"
-    ip      = "192.168.1.80"
   }
 }

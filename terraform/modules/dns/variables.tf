@@ -13,17 +13,6 @@ variable "cluster_name" {
   type        = string
 }
 
-
-variable "environment" {
-  description = "Environment name (e.g dev/staging/prod)"
-  type        = string
-}
-
-variable "ubuntu_image" {
-  description = "Ubuntu Cloud Image ID"
-  type        = string
-}
-
 variable "cluster_network_gateway" {
   description = "The IP network gateway of the cluster nodes"
   type        = string
@@ -36,6 +25,17 @@ variable "cluster_node_network" {
   default     = "192.168.1.1/24"
 }
 
+variable "environment" {
+  description = "Environment name (e.g dev/staging/prod)"
+  type        = string
+}
+
+variable "ubuntu_image" {
+  description = "Ubuntu Cloud Image ID"
+  type        = string
+}
+
+
 variable "dns_entries" {
   description = "List of DNS subdomains and IPs"
   type = list(object({
@@ -44,6 +44,11 @@ variable "dns_entries" {
     value = string
   }))
   default = []
+}
+
+variable "ip_address" {
+  description = "IP address of DNS VM instance"
+  type        = string
 }
 
 variable "vm_config" {
@@ -66,7 +71,6 @@ variable "vm_config" {
     })
     memory  = number
     network = string
-    ip      = string
   })
   default = {
     cpu = 1
@@ -86,6 +90,5 @@ variable "vm_config" {
     }
     memory  = 2048
     network = "vmbr0"
-    ip      = "192.168.1.90"
   }
 }

@@ -8,17 +8,58 @@ variable "proxmox_node_name" {
   type        = string
 }
 
+
 variable "base_domain" {
   description = "Base domain that will be serving the cluster"
   type        = string
   default     = ""
+
+  validation {
+    condition     = can(regex("^([a-zA-Z0-9][-a-zA-Z0-9]*\\.)+[a-zA-Z]{2,}$", var.base_domain)) || var.base_domain == ""
+    error_message = "'base_domain' must be a valid domain name or an empty string."
+  }
 }
+
 
 
 variable "cluster_name" {
   description = "Cluster name"
   type        = string
 }
+
+
+
+variable "cluster_ip_range" {
+  description = "Range of IPs available for cluster VMs in CIDR format"
+  type        = string
+  default     = "192.168.1.224/28"
+
+  validation {
+    condition     = can(cidrhost(var.cluster_ip_range, 1))
+    error_message = "The cluster_ip_range must be a valid CIDR range."
+  }
+
+  validation {
+    condition     = can(cidrhost(var.cluster_ip_range, var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 4))
+    error_message = "'cluster_ip_range' does not have enough usable IPs for the configuration. Adjust the CIDR range or reduce the number of nodes."
+  }
+}
+
+
+
+variable "cluster_node_network" {
+  description = "The IP network of the cluster nodes"
+  type        = string
+  default     = "192.168.1.1/24"
+}
+
+
+variable "cluster_network_gateway" {
+  description = "The IP network gateway of the cluster nodes"
+  type        = string
+  default     = "192.168.1.1"
+}
+
 
 variable "environment" {
   description = "Environment name (e.g dev/staging/prod)"
@@ -41,17 +82,6 @@ variable "talos_extensions" {
   }
 }
 
-variable "cluster_network_gateway" {
-  description = "The IP network gateway of the cluster nodes"
-  type        = string
-  default     = "192.168.1.1"
-}
-
-variable "cluster_node_network" {
-  description = "The IP network of the cluster nodes"
-  type        = string
-  default     = "192.168.1.1/24"
-}
 
 variable "talos_vm_config" {
   description = "Configuration for worker and control node VMs"

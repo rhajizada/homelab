@@ -131,7 +131,7 @@ resource "proxmox_virtual_environment_vm" "vpn_node" {
   initialization {
     ip_config {
       ipv4 {
-        address = "${var.vm_config.ip}/24"
+        address = "${var.ip_address}/24"
         gateway = var.cluster_network_gateway
       }
     }
