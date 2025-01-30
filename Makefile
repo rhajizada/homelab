@@ -1,7 +1,9 @@
 NAME := homelab
 VAR_FILE := dev.tfvars
-VPN_SSH_KEY := $(HOME)/.ssh/vpn.rsa
+HOMELAB_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+OUTPUT_DIR := $(HOMELAB_DIR)/output
 DNS_SSH_KEY := $(HOME)/.ssh/dns.rsa
+VPN_SSH_KEY := $(HOME)/.ssh/vpn.rsa
 
 
 
@@ -43,8 +45,8 @@ kubeconfig:
 .PHONY: vpn-client-config
 ## vpn-client-config: Generate Wireguard client configuration
 vpn-client-config:
-	mkdir -p data/wireguard
-	terraform -chdir=terraform output --json wireguard_client_configuration | jq -r . > data/wireguard/homelab.conf
+	mkdir -p $(OUTPUT_DIR)/wireguard
+	terraform -chdir=terraform output --json wireguard_client_configuration | jq -r . > $(OUTPUT_DIR)/wireguard/homelab.conf
 
 
 .PHONY: ssh-vpn

@@ -14,7 +14,7 @@ module "vpn" {
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
-  proxmox_node_name       = var.proxmox_node_name
+  proxmox_node_name       = var.proxmox_secondary_node
   ip_address              = local.vpn_ip
   vm_config               = var.vpn_vm_config
   dns_name                = local.vpn_dns_name
@@ -28,10 +28,18 @@ module "dns" {
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
-  proxmox_node_name       = var.proxmox_node_name
+  proxmox_node_name       = var.proxmox_secondary_node
   ip_address              = local.dns_ip
-  vm_config               = var.dns_vm_config
-  ubuntu_image            = proxmox_virtual_environment_download_file.ubuntu_image.id
+  base_domain             = var.base_domain
+  dns_entries = [
+    {
+      name  = "${var.base_domain}."
+      type  = "IN A"
+      value = local.kube_vip
+    }
+  ]
+  vm_config    = var.dns_vm_config
+  ubuntu_image = proxmox_virtual_environment_download_file.ubuntu_image.id
 }
 
 module "talos" {
@@ -41,7 +49,7 @@ module "talos" {
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
-  proxmox_node_name       = var.proxmox_node_name
+  proxmox_node_name       = var.proxmox_primary_node
   kube_vip                = local.kube_vip
   control_node_ips        = local.control_node_ips
   worker_node_ips         = local.worker_node_ips

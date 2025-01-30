@@ -1,10 +1,10 @@
 server:
   verbosity: 1
   interface: 0.0.0.0
-  access-control: 0.0.0.0/0 allow
-  do-not-query-localhost: no
+  access-control: 192.168.1.0/24 allow
 
   # DNS entries
+  local-zone: "${base_domain}." redirect
 %{ for entry in dns_entries ~}
   local-data: "${entry.name} ${entry.type} ${entry.value}"
 %{ endfor ~}

@@ -41,3 +41,4 @@ terraform.rc
 
 # Enviornment files
 .env
+output

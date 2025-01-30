@@ -4,6 +4,7 @@ locals {
     username = "root"
   }
   unbound_configuration = templatefile("${path.module}/templates/unbound.conf.tmpl", {
+    base_domain = var.base_domain
     dns_entries = var.dns_entries
   })
 
@@ -53,6 +54,7 @@ resource "proxmox_virtual_environment_file" "dns_user_data" {
         - groupadd -r unbound
         - useradd -r -g unbound -s /usr/sbin/nologin unbound
         - chown -R unbound:unbound /etc/unbound
+        - chown -R unbound:unbound /var/lib/unbound
         - chmod -R 750 /etc/unbound
         - systemctl enable qemu-guest-agent
         - systemctl start qemu-guest-agent

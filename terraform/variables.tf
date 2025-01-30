@@ -3,8 +3,13 @@ variable "proxmox_endpoint" {
   type        = string
 }
 
-variable "proxmox_node_name" {
-  description = "Proxmox node name"
+variable "proxmox_primary_node" {
+  description = "Proxmox primary node name"
+  type        = string
+}
+
+variable "proxmox_secondary_node" {
+  description = "Proxmox rimary node name"
   type        = string
 }
 
@@ -102,9 +107,8 @@ variable "talos_vm_config" {
       file_format  = string
       type         = string
     })
-    first_hostnum = number
-    memory        = number
-    network       = string
+    memory  = number
+    network = string
   }))
 }
 
@@ -134,7 +138,6 @@ variable "vpn_vm_config" {
     })
     memory  = number
     network = string
-    ip      = string
   })
   default = {
     cpu = 1
@@ -154,7 +157,6 @@ variable "vpn_vm_config" {
     }
     memory  = 2048
     network = "vmbr0"
-    ip      = "192.168.1.80"
   }
 }
 
@@ -178,7 +180,6 @@ variable "dns_vm_config" {
     })
     memory  = number
     network = string
-    ip      = string
   })
   default = {
     cpu = 1
@@ -198,6 +199,5 @@ variable "dns_vm_config" {
     }
     memory  = 2048
     network = "vmbr0"
-    ip      = "192.168.1.90"
   }
 }

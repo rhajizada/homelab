@@ -9,7 +9,6 @@ variable "proxmox_node_name" {
 }
 
 variable "cluster_name" {
-
   description = "Cluster name"
   type        = string
 }
@@ -77,9 +76,8 @@ variable "vm_config" {
       file_format  = string
       type         = string
     })
-    first_hostnum = number
-    memory        = number
-    network       = string
+    memory  = number
+    network = string
   }))
   default = {
     control = {
@@ -99,9 +97,8 @@ variable "vm_config" {
         file_format  = "raw"
         type         = "4m"
       }
-      first_hostnum = 60
-      memory        = 4096
-      network       = "vmbr0"
+      memory  = 4096
+      network = "vmbr0"
     }
     worker = {
       count = 1
@@ -120,9 +117,8 @@ variable "vm_config" {
         file_format  = "raw"
         type         = "4m"
       }
-      first_hostnum = 70
-      memory        = 4096
-      network       = "vmbr0"
+      memory  = 4096
+      network = "vmbr0"
     }
   }
 }
