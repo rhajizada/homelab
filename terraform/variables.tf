@@ -77,6 +77,16 @@ variable "talos_version" {
   default     = "v1.9.2"
 }
 
+variable "k8s_version" {
+  type        = string
+  description = "Version of Kubenetes to deploy"
+  default     = "1.32"
+  validation {
+    condition     = can(regex("^\\d+(\\.\\d+)+", var.k8s_version))
+    error_message = "Must be a version number."
+  }
+}
+
 #  please see https://github.com/siderolabs/extensions?tab=readme-ov-file#installing-extensions
 variable "talos_extensions" {
   description = "Map of Talos extension name to a specific version"

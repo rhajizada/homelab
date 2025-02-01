@@ -46,9 +46,23 @@ locals {
       inlineManifests = [
         {
           name = "metallb"
-          contents = templatefile("${path.module}/templates/metallb.yml.tmpl", {
+          contents = templatefile("${path.module}/templates/metallb.yaml.tmpl", {
             cidr_pool = ["${var.k8s_lb_ip}/32"]
           })
+        },
+        {
+          name = "traefik-namespace"
+          contents = templatefile("${path.module}/templates/namespace.yaml.tmpl", {
+            namespace = "traefik"
+          })
+        },
+        {
+          name     = "traefik-crds"
+          contents = data.helm_template.traefik_crds.manifest
+        },
+        {
+          name     = "traefik"
+          contents = data.helm_template.traefik.manifest
         }
       ]
     }
@@ -60,13 +74,14 @@ resource "talos_machine_secrets" "cluster" {
 }
 
 data "talos_machine_configuration" "control" {
-  cluster_name     = var.cluster_name
-  machine_type     = "controlplane"
-  cluster_endpoint = local.cluster_endpoint
-  talos_version    = var.talos_version
-  machine_secrets  = talos_machine_secrets.cluster.machine_secrets
-  examples         = false
-  docs             = false
+  cluster_name       = var.cluster_name
+  machine_type       = "controlplane"
+  cluster_endpoint   = local.cluster_endpoint
+  talos_version      = var.talos_version
+  kubernetes_version = var.k8s_version
+  machine_secrets    = talos_machine_secrets.cluster.machine_secrets
+  examples           = false
+  docs               = false
   config_patches = [
     yamlencode(local.common_machine_config),
     yamlencode(local.control_node_machine_config),
@@ -74,11 +89,12 @@ data "talos_machine_configuration" "control" {
 }
 
 data "talos_machine_configuration" "worker" {
-  cluster_name     = var.cluster_name
-  machine_type     = "worker"
-  cluster_endpoint = local.cluster_endpoint
-  talos_version    = var.talos_version
-  machine_secrets  = talos_machine_secrets.cluster.machine_secrets
+  cluster_name       = var.cluster_name
+  machine_type       = "worker"
+  cluster_endpoint   = local.cluster_endpoint
+  talos_version      = var.talos_version
+  kubernetes_version = var.k8s_version
+  machine_secrets    = talos_machine_secrets.cluster.machine_secrets
   config_patches = [
     yamlencode(local.common_machine_config)
   ]

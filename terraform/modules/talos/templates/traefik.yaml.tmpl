@@ -1,0 +1,15 @@
+service:
+  enabled: true
+  type: LoadBalancer
+  loadBalancerIP: ${lb_ip}
+
+ports:
+  web:
+    expose:
+      default: true
+    exposedPort: 80
+  websecure:
+    expose:
+      default: true
+    exposedPort: 443
+
