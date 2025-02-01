@@ -1,6 +1,11 @@
-output "talos_kube_vip" {
+output "talos_k8s_vip" {
   description = "Talos Kubernets VIP"
-  value       = module.talos.kube_vip
+  value       = module.talos.k8s_vip
+}
+
+output "talos_k8s_lb_ip" {
+  description = "Talos Kubernetes Load Balancer IP"
+  value       = module.talos.k8s_lb_ip
 }
 
 output "talos_control_plane_ips" {

@@ -1,5 +1,5 @@
 locals {
-  cluster_endpoint = "https://${local.control_nodes[0].address}:6443"
+  cluster_endpoint = "https://${var.k8s_vip}:6443"
   common_machine_config = {
     machine = {
       install = {
@@ -23,6 +23,36 @@ locals {
       }
     }
   }
+  control_node_machine_config = {
+    machine = {
+      network = {
+        interfaces = [
+          # see https://www.talos.dev/v1.8/talos-guides/network/vip/
+          {
+            interface = "eth0"
+            vip = {
+              ip = var.k8s_vip
+            }
+          }
+        ]
+      }
+    }
+    cluster = {
+      extraManifests = [
+        "https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml",
+        "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml",
+        "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml"
+      ]
+      inlineManifests = [
+        {
+          name = "metallb"
+          contents = templatefile("${path.module}/templates/metallb.yml.tmpl", {
+            cidr_pool = ["${var.k8s_lb_ip}/32"]
+          })
+        }
+      ]
+    }
+  }
 }
 
 resource "talos_machine_secrets" "cluster" {
@@ -39,14 +69,7 @@ data "talos_machine_configuration" "control" {
   docs             = false
   config_patches = [
     yamlencode(local.common_machine_config),
-    yamlencode({
-      cluster = {
-        extraManifests = [
-          "https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml",
-          "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
-        ]
-      }
-    })
+    yamlencode(local.control_node_machine_config),
   ]
 }
 
@@ -69,7 +92,7 @@ data "talos_client_configuration" "talos" {
 
 resource "talos_cluster_kubeconfig" "talos" {
   client_configuration = talos_machine_secrets.cluster.client_configuration
-  endpoint             = local.control_nodes[0].address
+  endpoint             = var.k8s_vip
   node                 = local.control_nodes[0].address
   depends_on = [
     talos_machine_bootstrap.talos,

@@ -1,6 +1,11 @@
-output "kube_vip" {
+output "k8s_vip" {
   description = "Kubernetes VIP"
-  value       = var.kube_vip
+  value       = var.k8s_vip
+}
+
+output "k8s_lb_ip" {
+  description = "Kubenenetes Load Balancer IP"
+  value       = var.k8s_lb_ip
 }
 
 output "control_plane_ips" {

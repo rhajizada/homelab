@@ -27,7 +27,7 @@
 #   values = [
 #     templatefile("${path.module}/templates/traefik.yaml.tmpl", {
 #       dashboard_dns = local.traefik.dashboard_dns,
-#       ingress_ip    = var.kube_vip,
+#       ingress_ip    = var.k8s_lb__vip,
 #       username      = local.traefik.username,
 #       password      = local.traefik.password
 #     })

@@ -30,6 +30,10 @@ apply:
 destroy:
 	terraform -chdir=terraform destroy -var-file=$(VAR_FILE)
 
+.PHONY: destoy-talos
+destroy-talos:
+	terraform -chdir=terraform destroy -target=module.talos -var-file=$(VAR_FILE)
+
 
 .PHONY: format
 ## format: Format terraform code

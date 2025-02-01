@@ -42,8 +42,14 @@ variable "talos_version" {
   type        = string
 }
 
-variable "kube_vip" {
+variable "k8s_vip" {
   description = "Talos Kubernetes VIP"
+  type        = string
+}
+
+
+variable "k8s_lb_ip" {
+  description = "Kubernetes load balancer IP"
   type        = string
 }
 
