@@ -34,3 +34,7 @@ output "talos_credentials" {
   }
 }
 
+output "cert_issuer" {
+  description = "K8s cert-manager cluster issuer name"
+  value       = local.cert_manager.issuer_name
+}

@@ -30,6 +30,11 @@ output "talos_kubeconfig" {
   value       = module.talos.kubeconfig
 }
 
+output "cluster_cert_issuer" {
+  description = "K8s cert-manager cluster issuer"
+  value       = module.talos.cert_issuer
+}
+
 output "vpn_node_ip" {
   description = "IP Address of VPN node"
   sensitive   = false

@@ -146,6 +146,33 @@ variable "vm_config" {
       }
       memory  = 4096
       network = "vmbr0"
-    }
-  }
+  } }
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}
+
+variable "aws_iam_credentials" {
+  description = "AWS IAM user credentials for cert-manager"
+  type = object({
+    access_key_id     = string
+    secret_access_key = string
+  })
+}
+
+variable "aws_route53_zone_id" {
+  description = "AWS Route 53 hosted zone id"
+  type        = string
+}
+
+variable "acme_email" {
+  description = "Email to use for ACME registration"
+  type        = string
+}
+
+variable "acme_server" {
+  description = "ACME server URL to use for certificate issuance"
+  type        = string
 }

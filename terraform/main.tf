@@ -1,5 +1,5 @@
 locals {
-  vpn_dns_name     = var.base_domain == "" ? "" : "vpn.${var.base_domain}"
+  vpn_dns_name     = "vpn.${var.base_domain}"
   dns_ip           = cidrhost(var.cluster_ip_range, 1)
   vpn_ip           = cidrhost(var.cluster_ip_range, 2)
   k8s_vip          = cidrhost(var.cluster_ip_range, 3)
@@ -43,6 +43,14 @@ module "dns" {
   ubuntu_image = proxmox_virtual_environment_download_file.ubuntu_image.id
 }
 
+module "route53" {
+  source       = "./modules/route53"
+  cluster_name = var.cluster_name
+  environment  = var.environment
+  base_domain  = var.base_domain
+  dns_name     = local.vpn_dns_name
+}
+
 module "talos" {
   source                  = "./modules/talos"
   cluster_name            = var.cluster_name
@@ -57,13 +65,11 @@ module "talos" {
   worker_node_ips         = local.worker_node_ips
   talos_version           = var.talos_version
   vm_config               = var.talos_vm_config
+  aws_iam_credentials     = module.route53.talos_iam_user
+  aws_region              = module.route53.aws_region
+  aws_route53_zone_id     = module.route53.route_53_zone_id
+  acme_email              = var.acme_email
+  acme_server             = var.acme_server
 }
 
-module "route53" {
-  source       = "./modules/route53"
-  count        = var.base_domain != "" ? 1 : 0
-  cluster_name = var.cluster_name
-  environment  = var.environment
-  base_domain  = var.base_domain
-  dns_name     = local.vpn_dns_name
-}
+

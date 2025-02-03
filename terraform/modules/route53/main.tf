@@ -1,3 +1,5 @@
+data "aws_region" "this" {}
+
 locals {
   tags = {
     cluster = var.cluster_name

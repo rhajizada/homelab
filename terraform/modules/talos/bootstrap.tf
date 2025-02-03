@@ -41,13 +41,30 @@ locals {
       extraManifests = [
         "https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml",
         "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml",
-        "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml"
+        "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml",
+        "https://github.com/cert-manager/cert-manager/releases/download/v${local.cert_manager.version}/cert-manager.crds.yaml"
       ]
       inlineManifests = [
         {
           name = "metallb"
           contents = templatefile("${path.module}/templates/metallb.yaml.tmpl", {
             cidr_pool = ["${var.k8s_lb_ip}/32"]
+          })
+        },
+        {
+          name     = "cert-manager"
+          contents = data.helm_template.cert_manager.manifest
+        },
+        {
+          name = "cert-manager-issuer"
+          contents = templatefile("${path.module}/templates/cert-manager.yaml.tmpl", {
+            acme_server           = var.acme_server
+            acme_email            = var.acme_email
+            aws_region            = var.aws_region
+            aws_access_key_id     = var.aws_iam_credentials.access_key_id
+            aws_secret_access_key = var.aws_iam_credentials.secret_access_key
+            hosted_zone_id        = var.aws_route53_zone_id
+            issuer_name           = local.cert_manager.issuer_name
           })
         },
         {

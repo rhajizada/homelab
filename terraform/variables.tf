@@ -26,6 +26,18 @@ variable "base_domain" {
 }
 
 
+variable "acme_email" {
+  description = "Email to use for ACME registration"
+  type        = string
+}
+
+variable "acme_server" {
+  description = "ACME server URL to use for certificate issuance"
+  default     = "https://acme-staging-v02.api.letsencrypt.org/directory"
+  type        = string
+}
+
+
 
 variable "cluster_name" {
   description = "Cluster name"
