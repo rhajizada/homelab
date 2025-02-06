@@ -38,6 +38,18 @@ locals {
       }
     }
     cluster = {
+      apiServer = {
+        admissionControl = [{
+          name = "PodSecurity"
+          configuration = {
+            apiVersion = "pod-security.admission.config.k8s.io/v1beta1"
+            kind       = "PodSecurityConfiguration"
+            exemptions = {
+              namespaces = ["traefik", "longhorn-system"]
+            }
+          }
+        }]
+      }
       extraManifests = [
         "https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml",
         "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml",
@@ -80,8 +92,47 @@ locals {
         {
           name     = "traefik"
           contents = data.helm_template.traefik.manifest
+        },
+        {
+          name = "longhorn-namespace"
+          contents = templatefile("${path.module}/templates/namespace.yaml.tmpl", {
+            namespace = "longhorn-system"
+          })
+        },
+        {
+          name     = "longhorn"
+          contents = data.helm_template.longhorn.manifest
         }
       ]
+    }
+  }
+  worker_node_machine_config = {
+    machine = {
+      # sysctls = {
+      #   "vm.nr_hugepages" = "1024"
+      # }
+      # nodeLabels = {
+      #   "openebs.io/engine" = "mayastor"
+      # }
+      # disks = [
+      #   {
+      #     device = "/dev/sda"
+      #   }
+      # ]
+      kubelet = {
+        extraMounts = [
+          {
+            destination = "/var/lib/longhorn"
+            type        = "bind"
+            source      = "/var/lib/longhorn"
+            options = [
+              "rbind",
+              "rshared",
+              "rw",
+            ]
+          },
+        ]
+      }
     }
   }
 }
@@ -113,7 +164,8 @@ data "talos_machine_configuration" "worker" {
   kubernetes_version = var.k8s_version
   machine_secrets    = talos_machine_secrets.cluster.machine_secrets
   config_patches = [
-    yamlencode(local.common_machine_config)
+    yamlencode(local.common_machine_config),
+    yamlencode(local.worker_node_machine_config),
   ]
 }
 

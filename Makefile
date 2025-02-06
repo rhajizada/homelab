@@ -51,13 +51,17 @@ destroy:
 format:
 	terraform -chdir=terraform fmt -recursive .
 
-# Combined configuration target for kube and vpn.
+# Combined configuration target for talos, kube and vpn.
 .PHONY: config
-## config: Generate configuration files (kube or vpn)
+## config: Generate configuration files (talos, kube or vpn)
 config:
 	@if [ -z "$(MODULE)" ]; then \
-		echo "Usage: make config <kube|vpn>"; \
+		echo "Usage: make config <talos|kube|vpn>"; \
 		exit 1; \
+	elif [ "$(MODULE)" = "talos" ]; then \
+		mkdir -p $(OUTPUT_DIR)/talos; \
+		terraform -chdir=terraform output -json | jq -r .talos_client_config.value > $(OUTPUT_DIR)/talos/talosconfig; \
+		echo export TALOSCONFIG=\'$(OUTPUT_DIR)/talos/talosconfig\'; \
 	elif [ "$(MODULE)" = "kube" ]; then \
 		mkdir -p $(OUTPUT_DIR)/kube; \
 		terraform -chdir=terraform output -json | jq -r .talos_kubeconfig.value > $(OUTPUT_DIR)/kube/config; \
@@ -67,7 +71,7 @@ config:
 		mkdir -p $(OUTPUT_DIR)/wireguard; \
 		terraform -chdir=terraform output --json wireguard_client_configuration | jq -r . > $(OUTPUT_DIR)/wireguard/homelab.conf; \
 	else \
-		echo "Unknown config type: $(MODULE). Valid options are: 'kube' or 'vpn'"; \
+		echo "Unknown config type: $(MODULE). Valid options are: 'talos', 'kube' or 'vpn'"; \
 		exit 1; \
 	fi
 

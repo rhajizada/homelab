@@ -105,6 +105,7 @@ variable "talos_extensions" {
   type        = map(string)
   default = {
     "intel-ucode"      = "20241112"
+    "iscsi-tools"      = "v0.1.6"
     "qemu-guest-agent" = "9.2.0"
   }
 }

@@ -18,10 +18,10 @@ output "talos_worker_ips" {
   value       = module.talos.worker_ips
 }
 
-output "talos_credentials" {
-  description = "Talos cluster credentials"
+output "talos_client_config" {
+  description = "Talos cluster client configuration"
   sensitive   = true
-  value       = module.talos.talos_credentials
+  value       = module.talos.talos_client_config
 }
 
 output "talos_kubeconfig" {
