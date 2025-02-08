@@ -1,0 +1,158 @@
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  TF: terraform # tofu
+  NAME: homelab
+  TFVAR_FILE: dev.tfvars
+  OUTPUT_DIR: "{{.USER_WORKING_DIR}}/output"
+  SSH_DIR: "{{.OUTPUT_DIR}}/ssh"
+  DNS_SSH_KEY: "{{.SSH_DIR}}/dns.rsa"
+  VPN_SSH_KEY: "{{.SSH_DIR}}/vpn.rsa"
+
+tasks:
+  init:
+    desc: "Prepare your working directory for other commands"
+    cmds:
+      - |
+        if [ -z "{{.MODULE}}" ]; then
+          {{.TF}} -chdir=terraform init -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} -chdir=terraform init -target=module.{{.MODULE}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      MODULE: '{{.MODULE | default ""}}'
+
+  validate:
+    desc: "Check whether the configuration is valid"
+    cmds:
+      - |
+        if [ -z "{{.MODULE}}" ]; then
+          {{.TF}} -chdir=terraform validate -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} -chdir=terraform validate -target=module.{{.MODULE}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      MODULE: '{{.MODULE | default ""}}'
+
+  plan:
+    desc: "Show changes required by the current configuration"
+    cmds:
+      - |
+        if [ -z "{{.MODULE}}" ]; then
+          {{.TF}} -chdir=terraform plan -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} -chdir=terraform plan -target=module.{{.MODULE}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      MODULE: '{{.MODULE | default ""}}'
+
+  apply:
+    desc: "Create or update infrastructure"
+    cmds:
+      - |
+        if [ -z "{{.MODULE}}" ]; then
+          {{.TF}} -chdir=terraform apply -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} -chdir=terraform apply -target=module.{{.MODULE}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      MODULE: '{{.MODULE | default ""}}'
+
+  destroy:
+    desc: "Create or update infrastructure"
+    cmds:
+      - |
+        if [ -z "{{.MODULE}}" ]; then
+          {{.TF}} -chdir=terraform destroy -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} -chdir=terraform destroy -target=module.{{.MODULE}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      MODULE: '{{.MODULE | default ""}}'
+
+  format:
+    desc: "Reformat your configuration in the standard style"
+    cmds:
+      - |
+        {{.TF}} -chdir=terraform fmt -recursive .
+
+  config:
+    desc: "Generate configuration files for specified module"
+    vars:
+      MODULE: '{{.MODULE | default ""}}'
+      OUTPUT_FILE: |
+        {{- if eq .MODULE "talos" -}}
+        {{.OUTPUT_DIR}}/talos/talosconfig
+        {{- else if eq .MODULE "kube" -}}
+        {{.OUTPUT_DIR}}/kube/config
+        {{- else if eq .MODULE "vpn" -}}
+        {{.OUTPUT_DIR}}/wireguard/{{.NAME}}.conf
+        {{- else -}}
+        ""
+        {{- end -}}
+    cmds:
+      - |
+        if [ -z "{{.MODULE}}" ]; then
+          echo "Usage: task config MODULE=<talos|kube|vpn>"
+          exit 1
+        fi
+        mkdir -p "$(dirname "{{.OUTPUT_FILE}}")"
+        case "{{.MODULE}}" in
+          talos)
+            OUTPUT=$({{.TF}} -chdir=terraform output -json | jq -r .talos_config.value)
+            echo "export TALOSCONFIG='{{.OUTPUT_FILE}}'"
+            ;;
+          kube)
+            OUTPUT=$({{.TF}} -chdir=terraform output -json | jq -r .talos_kubeconfig.value)
+            echo "alias kubectl='kubectl --kubeconfig={{.OUTPUT_FILE}}'"
+            echo "alias k9s='k9s --kubeconfig={{.OUTPUT_FILE}}'"
+            ;;
+          vpn)
+            OUTPUT=$({{.TF}} -chdir=terraform output --json wireguard_client_configuration | jq -r)
+            ;;
+        esac
+        echo "$OUTPUT" > {{.OUTPUT_FILE}}
+    silent: true
+    generates:
+      - "{{.OUTPUT_FILE}}"
+
+  ssh:
+    desc: "Generate SSH key and connect to specified node (vpn or dns)"
+    vars:
+      MODULE: '{{.MODULE | default ""}}'
+      CONNECT: "{{.CONNECT | default false}}"
+      SSH_KEY: |
+        {{- if eq .MODULE "vpn" -}}
+        {{.VPN_SSH_KEY}}
+        {{- else if eq .MODULE "dns" -}}
+        {{.DNS_SSH_KEY}}
+        {{- else -}}
+        ""
+        {{- end -}}
+    cmds:
+      - |
+        if [ -z "{{.MODULE}}" ]; then
+          echo "Usage: task ssh MODULE=<vpn|dns>"
+          exit 1
+        fi
+        mkdir -p "{{.SSH_DIR}}"
+        CREDENTIALS_KEY="{{.MODULE}}_node_credentials"
+        NODE_IP_KEY="{{.MODULE}}_node_ip"
+        {{.TF}} -chdir=terraform output -json "$CREDENTIALS_KEY" | jq -r .ssh_private_key > "{{.SSH_KEY}}"
+        chmod 0600 "{{.SSH_KEY}}"
+        USERNAME=$({{.TF}} -chdir=terraform output -json "$CREDENTIALS_KEY" | jq -r .username)
+        IP_ADDR=$({{.TF}} -chdir=terraform output -json "$NODE_IP_KEY" | jq -r .)
+        if [ "{{.CONNECT}}" == "true" ]; then
+          ssh-keygen -R "$IP_ADDR"
+          ssh -i "{{.SSH_KEY}}" "$USERNAME@$IP_ADDR"
+        fi
+    silent: true
+    generates:
+      - "{{.SSH_KEY}}"
