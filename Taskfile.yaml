@@ -5,21 +5,37 @@ dotenv: [".env"]
 vars:
   TF: terraform # tofu
   NAME: homelab
-  TFVAR_FILE: dev.tfvars
+  ENV: dev
+  TF_S3_BUCKET: "tf-{{.NAME}}-{{.ENV}}-state"
+  TF_S3_KEY: "{{.NAME}}.tfstate"
+  TF_S3_REGION: "us-east-1"
+  TF_ARGS: '-backend-config="bucket={{.TF_S3_BUCKET}}" -backend-config="key={{.TF_S3_KEY}}" -backend-config="region={{.TF_S3_REGION}}"'
+  TFVAR_FILE: "{{.ENV}}.tfvars"
   OUTPUT_DIR: "{{.USER_WORKING_DIR}}/output"
   SSH_DIR: "{{.OUTPUT_DIR}}/ssh"
   DNS_SSH_KEY: "{{.SSH_DIR}}/dns.rsa"
   VPN_SSH_KEY: "{{.SSH_DIR}}/vpn.rsa"
 
 tasks:
+  s3-backend:
+    desc: "Create S3 bucket for terraform storage management"
+    cmds:
+      - |
+        aws s3api list-buckets --query "Buckets[].Name" --output json | grep -q '"{{.TF_S3_BUCKET}}"' || \
+        aws s3api create-bucket --bucket {{.TF_S3_BUCKET}} --region {{.S3_REGION}} --create-bucket-configuration LocationConstraint={{.S3_REGION}}
+        aws s3api put-bucket-versioning --bucket {{.TF_S3_BUCKET}} --versioning-configuration Status=Enabled
+        aws s3api put-bucket-tagging --bucket {{.TF_S3_BUCKET}} --tagging 'TagSet=[{Key=env,Value={{.ENV}}}]'
+    silent: true
+
   init:
+    deps: [s3-backend]
     desc: "Prepare your working directory for other commands"
     cmds:
       - |
         if [ -z "{{.MODULE}}" ]; then
-          {{.TF}} -chdir=terraform init -var-file={{.TFVAR_FILE}}
+          {{.TF}} -chdir=terraform init {{.TF_ARGS}}
         else
-          {{.TF}} -chdir=terraform init -target=module.{{.MODULE}} -var-file={{.TFVAR_FILE}}
+          {{.TF}} -chdir=terraform/modules/{{.MODULE}} init
         fi
     silent: true
     vars:
@@ -30,9 +46,9 @@ tasks:
     cmds:
       - |
         if [ -z "{{.MODULE}}" ]; then
-          {{.TF}} -chdir=terraform validate -var-file={{.TFVAR_FILE}}
+          {{.TF}} -chdir=terraform validate
         else
-          {{.TF}} -chdir=terraform validate -target=module.{{.MODULE}} -var-file={{.TFVAR_FILE}}
+          {{.TF}} -chdir=terraform validate -target=module.{{.MODULE}}
         fi
     silent: true
     vars:
