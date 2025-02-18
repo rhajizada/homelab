@@ -49,7 +49,6 @@ variable "cluster_name" {
 variable "cluster_ip_range" {
   description = "Range of IPs available for cluster VMs in CIDR format"
   type        = string
-  default     = "192.168.1.224/28"
 
   validation {
     condition     = can(cidrhost(var.cluster_ip_range, 1))
