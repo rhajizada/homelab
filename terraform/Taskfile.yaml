@@ -149,6 +149,21 @@ tasks:
     generates:
       - "{{.output_file}}"
 
+  kubeseal:
+    desc: "Generate kubeseal cerificate"
+    vars:
+      output_file: "{{.OUTPUT_DIR}}/kubeseal/{{.NAME}}.cert"
+    preconditions:
+      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.talos"'
+        msg: "talos cluster is not deployed, apply configuration first"
+    cmds:
+      - |
+        mkdir -p "$(dirname "{{.output_file}}")"
+        kubeseal --fetch-cert > {{.output_file}}
+    silent: true
+    generates:
+      - "{{.output_file}}"
+
   talosconfig:
     desc: "Generate 'talosconfig'"
     vars:
