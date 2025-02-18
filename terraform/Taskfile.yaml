@@ -1,0 +1,191 @@
+version: "3"
+
+vars:
+  TF_BACKEND_ENCRYPT: true
+  TF_BACKEND_S3_BUCKET: "tf-{{.NAME}}-{{.ENV}}-state"
+  TF_BACKEND_S3_KEY: "{{.NAME}}.tfstate"
+  TF_BACKEND_S3_REGION: "us-east-1"
+  TF_BACKEND_ARGS: |
+    -backend-config="encrypt={{.TF_BACKEND_ENCRYPT}}"
+    -backend-config="bucket={{.TF_BACKEND_S3_BUCKET}}"
+    -backend-config="key={{.TF_BACKEND_S3_KEY}}"
+    -backend-config="region={{.TF_BACKEND_S3_REGION}}"
+  TFVAR_FILE: "{{.ENV}}.tfvars"
+
+tasks:
+  s3-backend:
+    desc: "Create AWS S3 bucket for terraform backend"
+    cmds:
+      - |
+        aws s3api list-buckets --query "Buckets[].Name" --output json | grep -q '"{{.TF_BACKEND_S3_BUCKET}}"' || \
+        aws s3api create-bucket --bucket {{.TF_BACKEND_S3_BUCKET}} --region {{.TF_BACKEND_S3_REGION}} --create-bucket-configuration LocationConstraint={{.S3_REGION}}
+        aws s3api put-bucket-versioning --bucket {{.TF_BACKEND_S3_BUCKET}} --versioning-configuration Status=Enabled
+        aws s3api put-bucket-tagging --bucket {{.TF_BACKEND_S3_BUCKET}} --tagging 'TagSet=[{Key=env,Value={{.ENV}}}]'
+    silent: true
+    internal: true
+
+  init:
+    deps: [s3-backend]
+    desc: "Prepare your working directory for other commands"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} -chdir=terraform init {{.TF_ARGS}}
+        else
+          {{.TF}} -chdir=terraform/modules/{{.module}} init
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  validate:
+    desc: "Check whether the configuration is valid"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} -chdir=terraform validate
+        else
+          {{.TF}} -chdir=terraform validate -target=module.{{.module}}
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  plan:
+    desc: "Show changes required by the current configuration"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} -chdir=terraform plan -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} -chdir=terraform plan -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  apply:
+    desc: "Create or update infrastructure"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} -chdir=terraform apply -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} -chdir=terraform apply -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  destroy:
+    desc: "Create or update infrastructure"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} -chdir=terraform destroy -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} -chdir=terraform destroy -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  format:
+    desc: "Reformat your configuration in the standard style"
+    cmds:
+      - |
+        {{.TF}} -chdir=terraform fmt -recursive .
+
+  ssh:
+    desc: "Generate SSH key and connect to specified node (vpn or dns)"
+    vars:
+      module: '{{.module | default ""}}'
+      connect: "{{.connect | default false}}"
+      ssh_key: "{{.SSH_DIR}}/{{.module}}.rsa"
+    preconditions:
+      - sh: '[ "{{.module}}" = "vpn" ] || [ "{{.module}}" = "dns" ]'
+        msg: "invalid module '{{.module}}'; allowed values: 'vpn' or 'dns'"
+      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.{{.module}}"'
+        msg: "terraform module not found, apply configuration first"
+    cmds:
+      - |
+        mkdir -p "{{.SSH_DIR}}"
+        CREDENTIALS_KEY="{{.module}}_node_credentials"
+        NODE_IP_KEY="{{.module}}_node_ip"
+        {{.TF}} -chdir=terraform output -json "$CREDENTIALS_KEY" | jq -r .ssh_private_key > "{{.ssh_key}}"
+        chmod 0600 "{{.ssh_key}}"
+        if [ "{{.connect}}" == "true" ]; then
+          USERNAME=$({{.TF}} -chdir=terraform output -json "$CREDENTIALS_KEY" | jq -r .username)
+          IP_ADDR=$({{.TF}} -chdir=terraform output -json "$NODE_IP_KEY" | jq -r .)
+          ssh-keygen -R "$IP_ADDR"
+          ssh -i "{{.ssh_key}}" "$USERNAME@$IP_ADDR"
+        fi
+    silent: true
+    generates:
+      - "{{.ssh_key}}"
+
+  kubeconfig:
+    desc: "Generate 'kubeconfig'"
+    vars:
+      output_file: "{{.OUTPUT_DIR}}/kube/config"
+      symlink: "{{.symlink | default false}}"
+    preconditions:
+      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.talos"'
+        msg: "talos cluster is not deployed, apply configuration first"
+    cmds:
+      - |
+        mkdir -p "$(dirname "{{.OUTPUT_FILE}}")"
+        {{.TF}} -chdir=terraform output -json | jq -r .talos_kubeconfig.value > {{.output_file}}
+        if [ "{{.symlink}}" == "true" ]; then
+          if [ ! -f "$HOME/.kube/config" ]; then
+            mkdir -p "$HOME/.kube"
+            ln -s "{{.output_file}}" "$HOME/.kube/config"
+            echo "symlink created: $HOME/.kube/config -> {{.output_file}}"
+          else
+            echo "$HOME/.kube/config already exists, skipping symlink creation"
+          fi
+        fi
+    silent: true
+    generates:
+      - "{{.output_file}}"
+
+  talosconfig:
+    desc: "Generate 'talosconfig'"
+    vars:
+      output_file: "{{.OUTPUT_DIR}}/talos/config"
+      symlink: "{{.symlink | default false}}"
+    preconditions:
+      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.talos"'
+        msg: "talos cluster is not deployed, apply configuration first"
+    cmds:
+      - |
+        mkdir -p "$(dirname "{{.output_file}}")"
+        {{.TF}} -chdir=terraform output -json | jq -r .talos_config.value > {{.output_file}}
+        if [ "{{.symlink}}" == "true" ]; then
+          if [ ! -f "$HOME/.talos/config" ]; then
+            mkdir -p "$HOME/.talos"
+            ln -s "{{.output_file}}" "$HOME/.talos/config"
+            echo "symlink created: $HOME/.talos/config -> {{.output_file}}"
+          else
+            echo "$HOME/.talos/config already exists, skipping symlink creation"
+          fi
+        fi
+    silent: true
+    generates:
+      - "{{.output_file}}"
+
+  wireguard:
+    desc: "Generate wireguard client configuration"
+    vars:
+      output_file: "{{.OUTPUT_DIR}}/wireguard/{{.NAME}}.conf"
+      symlink: "{{.symlink | default false}}"
+    preconditions:
+      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.vpn"'
+        msg: "vpn instance is not deployed yet, apply configuration first"
+    cmds:
+      - |
+        mkdir -p "$(dirname "{{.output_file}}")"
+        {{.TF}} -chdir=terraform output --json wireguard_client_configuration | jq -r > {{.output_file}}
+    silent: true
+    generates:
+      - "{{.output_file}}"
