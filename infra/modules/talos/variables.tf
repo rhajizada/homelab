@@ -59,7 +59,7 @@ variable "k8s_version" {
   default     = "1.32.1"
   validation {
     condition     = can(regex("^\\d+(\\.\\d+)+", var.k8s_version))
-    error_message = "Must be a version number."
+    error_message = "must be a version number"
   }
 }
 

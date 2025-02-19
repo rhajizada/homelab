@@ -42,7 +42,7 @@ variable "base_domain" {
 
   validation {
     condition     = can(regex("^([a-zA-Z0-9][-a-zA-Z0-9]*\\.)+[a-zA-Z]{2,}$", var.base_domain)) || var.base_domain == ""
-    error_message = "'base_domain' must be a valid domain name or an empty string."
+    error_message = "'base_domain' must be a valid domain name or an empty string"
   }
 }
 

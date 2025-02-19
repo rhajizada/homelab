@@ -13,3 +13,7 @@ includes:
   infra:
     taskfile: ./infra/Taskfile.yaml
     dir: ./infra
+
+  apps:
+    taskfile: ./apps/Taskfile.yaml
+    dir: ./apps
