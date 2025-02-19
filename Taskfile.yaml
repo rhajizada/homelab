@@ -12,3 +12,4 @@ vars:
 includes:
   tf:
     taskfile: ./terraform/Taskfile.yaml
+    dir: ./terraform
