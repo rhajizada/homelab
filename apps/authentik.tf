@@ -3,6 +3,9 @@ locals {
     namespace = "authentik"
     version   = "2024.12.3"
     host      = "authentik.${var.base_domain}"
+    groups = {
+      gitea = ["gituser", "gitadmin", "gitrestricted"]
+    }
   }
 }
 
@@ -71,3 +74,83 @@ resource "helm_release" "authentik" {
 
   force_update = true
 }
+
+resource "random_password" "gitea_client_id" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "gitea_client_secret" {
+  length  = 64
+  special = true
+}
+
+data "authentik_flow" "default_authorization_flow" {
+  slug = "default-provider-authorization-implicit-consent"
+}
+
+data "authentik_flow" "default_invalidation_flow" {
+  slug = "default-provider-invalidation-flow"
+}
+
+data "authentik_property_mapping_provider_scope" "email" {
+  name = "authentik default OAuth Mapping: OpenID 'email'"
+}
+
+data "authentik_property_mapping_provider_scope" "profile" {
+  name = "authentik default OAuth Mapping: OpenID 'profile'"
+}
+
+data "authentik_property_mapping_provider_scope" "openid" {
+  name = "authentik default OAuth Mapping: OpenID 'openid'"
+}
+
+resource "authentik_property_mapping_provider_scope" "gitea" {
+  name       = "authentik gitea OAuth Mapping: OpenID 'gitea'"
+  expression = <<EOF
+gitea_claims = {}
+if request.user.ak_groups.filter(name="gituser").exists():
+    gitea_claims["gitea"]= "user"
+if request.user.ak_groups.filter(name="gitadmin").exists():
+    gitea_claims["gitea"]= "admin"
+if request.user.ak_groups.filter(name="gitrestricted").exists():
+    gitea_claims["gitea"]= "restricted"
+
+return gitea_claims
+EOF
+  scope_name = "gitea"
+}
+
+resource "authentik_provider_oauth2" "gitea" {
+  depends_on         = [authentik_property_mapping_provider_scope.gitea]
+  name               = "Gitea"
+  client_id          = random_password.gitea_client_id.result
+  client_secret      = random_password.gitea_client_secret.result
+  authorization_flow = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  allowed_redirect_uris = [
+    {
+      matching_mode = "strict",
+      url           = "https://git.${var.base_domain}/user/oauth2/authentik/callback",
+    }
+  ]
+  property_mappings = [
+    data.authentik_property_mapping_provider_scope.email.id,
+    data.authentik_property_mapping_provider_scope.profile.id,
+    data.authentik_property_mapping_provider_scope.openid.id,
+    authentik_property_mapping_provider_scope.gitea.id
+  ]
+}
+
+resource "authentik_application" "gitea" {
+  name              = "Gitea"
+  slug              = "gitea-slug"
+  protocol_provider = authentik_provider_oauth2.gitea.id
+}
+
+
+resource "authentik_group" "gitea_groups" {
+  for_each = toset(local.authentik.groups.gitea)
+  name     = each.value
+}
+
