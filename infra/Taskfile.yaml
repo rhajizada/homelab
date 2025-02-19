@@ -3,13 +3,9 @@ version: "3"
 vars:
   TF_BACKEND_ENCRYPT: true
   TF_BACKEND_S3_BUCKET: "tf-{{.NAME}}-{{.ENV}}-state"
-  TF_BACKEND_S3_KEY: "{{.NAME}}.tfstate"
+  TF_BACKEND_S3_KEY: "infra/{{.TF}}.tfstate"
   TF_BACKEND_S3_REGION: "us-east-1"
-  TF_BACKEND_ARGS: |
-    -backend-config="encrypt={{.TF_BACKEND_ENCRYPT}}"
-    -backend-config="bucket={{.TF_BACKEND_S3_BUCKET}}"
-    -backend-config="key={{.TF_BACKEND_S3_KEY}}"
-    -backend-config="region={{.TF_BACKEND_S3_REGION}}"
+  TF_BACKEND_ARGS: -backend-config="encrypt={{.TF_BACKEND_ENCRYPT}}" -backend-config="bucket={{.TF_BACKEND_S3_BUCKET}}" -backend-config="key={{.TF_BACKEND_S3_KEY}}" -backend-config="region={{.TF_BACKEND_S3_REGION}}"
   TFVAR_FILE: "{{.ENV}}.tfvars"
 
 tasks:
@@ -30,11 +26,11 @@ tasks:
     cmds:
       - |
         if [ -z "{{.module}}" ]; then
-          {{.TF}} init {{.TF_ARGS}}
+          {{.TF}} init {{.TF_BACKEND_ARGS}}
         else
           {{.TF}} -chdir=./modules/{{.module}} init
         fi
-    silent: true
+    silent: false
     vars:
       module: '{{.module | default ""}}'
 

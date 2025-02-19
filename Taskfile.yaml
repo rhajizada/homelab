@@ -10,6 +10,6 @@ vars:
   SSH_DIR: "{{.OUTPUT_DIR}}/ssh"
 
 includes:
-  tf:
-    taskfile: ./terraform/Taskfile.yaml
-    dir: ./terraform
+  infra:
+    taskfile: ./infra/Taskfile.yaml
+    dir: ./infra
