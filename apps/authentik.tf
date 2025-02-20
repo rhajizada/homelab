@@ -71,8 +71,6 @@ resource "helm_release" "authentik" {
       cert_issuer         = var.cluster_cert_issuer
     })
   ]
-
-  force_update = true
 }
 
 resource "random_password" "gitea_client_id" {
