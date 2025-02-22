@@ -1,23 +1,36 @@
 gitea:
   oauth:
-    - name: "${oauth_name}"
-      provider: "openidConnect"
-      existingSecret: gitea-authentik-secret
-      autoDiscoverUrl: "${oauth_discovery_url}"
-      iconUrl: "https://goauthentik.io/img/icon.png"
-      scopes: "${oauth_scopes}"
+  - name: "${oauth_name}"
+    provider: "openidConnect"
+    existingSecret: gitea-authentik-secret
+    autoDiscoverUrl: "${oauth_discovery_url}"
+    iconUrl: "https://goauthentik.io/img/icon.png"
+    scopes: "${oauth_scopes}"
+  admin:
+    existingSecret: gitea-admin-secret
+  config:
+    server:
+      DISABLE_SSH: true
+      DOMAIN: ${host}
+    oauth2:
+      ENABLED: false
+    actions:
+      ENABLED: false
+    admin:
+      DISABLE_REGULAR_ORG_CREATION: true
 
-service:
-  ingress:
-    enabled: true
-    ingressClassName: traefik
-    annotations:
-      traefik.ingress.kubernetes.io/router.entrypoints: websecure
-      cert-manager.io/cluster-issuer: "${cert_issuer}"
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: "${cert_issuer}"
+  hosts:
+    - host: ${host}
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+  - secretName: authentik-tls
     hosts:
-      - "${host}"
-    tls:
-      - secretName: authentik-tls
-        hosts:
-          - "${host}"
-
+    - "${host}"

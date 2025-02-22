@@ -37,6 +37,11 @@ module "dns" {
       name  = "${var.base_domain}."
       type  = "IN A"
       value = local.k8s_lb_ip
+    },
+    {
+      name  = "${var.base_domain}."
+      type  = "IN A"
+      value = local.k8s_lb_ip
     }
   ]
   vm_config    = var.dns_vm_config

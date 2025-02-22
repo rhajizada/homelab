@@ -84,26 +84,42 @@ resource "random_password" "gitea_client_secret" {
 }
 
 data "authentik_flow" "default_authorization_flow" {
+  depends_on = [
+    helm_release.authentik
+  ]
   slug = "default-provider-authorization-implicit-consent"
 }
 
 data "authentik_flow" "default_invalidation_flow" {
+  depends_on = [
+    helm_release.authentik
+  ]
   slug = "default-provider-invalidation-flow"
 }
 
 data "authentik_property_mapping_provider_scope" "email" {
+  depends_on = [
+    helm_release.authentik
+  ]
   name = "authentik default OAuth Mapping: OpenID 'email'"
 }
 
 data "authentik_property_mapping_provider_scope" "profile" {
+  depends_on = [
+    helm_release.authentik
+  ]
   name = "authentik default OAuth Mapping: OpenID 'profile'"
 }
 
 data "authentik_property_mapping_provider_scope" "openid" {
+  depends_on = [
+    helm_release.authentik
+  ]
   name = "authentik default OAuth Mapping: OpenID 'openid'"
 }
 
 resource "authentik_property_mapping_provider_scope" "gitea" {
+  depends_on = [helm_release.authentik]
   name       = "authentik gitea OAuth Mapping: OpenID 'gitea'"
   expression = <<EOF
 gitea_claims = {}
@@ -120,7 +136,10 @@ EOF
 }
 
 resource "authentik_provider_oauth2" "gitea" {
-  depends_on         = [authentik_property_mapping_provider_scope.gitea]
+  depends_on = [
+    helm_release.authentik,
+    authentik_property_mapping_provider_scope.gitea
+  ]
   name               = "Gitea"
   client_id          = random_password.gitea_client_id.result
   client_secret      = random_password.gitea_client_secret.result

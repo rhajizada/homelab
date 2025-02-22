@@ -1,10 +1,7 @@
 version: "3"
 
 vars:
-  TF_BACKEND_ENCRYPT: true
-  TF_BACKEND_S3_BUCKET: "tf-{{.NAME}}-{{.ENV}}-state"
-  TF_BACKEND_S3_REGION: "us-east-1"
-  TF_BACKEND_S3_KEY: "infra/{{.TF}}.tfstate"
+  TF_BACKEND_S3_KEY: "infra/{{.ENV}}.tfstate"
   TF_BACKEND_ARGS: -backend-config="encrypt={{.TF_BACKEND_ENCRYPT}}" -backend-config="bucket={{.TF_BACKEND_S3_BUCKET}}" -backend-config="key={{.TF_BACKEND_S3_KEY}}" -backend-config="region={{.TF_BACKEND_S3_REGION}}"
   TFVAR_FILE: "{{.ENV}}.tfvars"
 
@@ -14,7 +11,7 @@ tasks:
     cmds:
       - |
         aws s3api list-buckets --query "Buckets[].Name" --output json | grep -q '"{{.TF_BACKEND_S3_BUCKET}}"' || \
-        aws s3api create-bucket --bucket {{.TF_BACKEND_S3_BUCKET}} --region {{.TF_BACKEND_S3_REGION}} --create-bucket-configuration LocationConstraint={{.S3_REGION}}
+        aws s3api create-bucket --bucket {{.TF_BACKEND_S3_BUCKET}} --region {{.TF_BACKEND_S3_REGION}} --endpoint-url https://s3.amazonaws.com
         aws s3api put-bucket-versioning --bucket {{.TF_BACKEND_S3_BUCKET}} --versioning-configuration Status=Enabled
         aws s3api put-bucket-tagging --bucket {{.TF_BACKEND_S3_BUCKET}} --tagging 'TagSet=[{Key=env,Value={{.ENV}}}]'
     silent: true
@@ -95,22 +92,22 @@ tasks:
   ssh:
     desc: "Generate SSH key and connect to specified node (vpn or dns)"
     vars:
-      module: '{{.module | default ""}}'
+      node: '{{.node | default ""}}'
       connect: "{{.connect | default false}}"
-      ssh_key: "{{.SSH_DIR}}/{{.module}}.rsa"
+      ssh_key: "{{.SSH_DIR}}/{{.node}}.rsa"
     preconditions:
-      - sh: '[ "{{.module}}" = "vpn" ] || [ "{{.module}}" = "dns" ]'
-        msg: "invalid module '{{.module}}'; allowed values: 'vpn' or 'dns'"
-      - sh: '{{.TF}} state list | grep -q "module.{{.module}}"'
-        msg: "terraform module not found, apply configuration first"
+      - sh: '[ "{{.node}}" = "vpn" ] || [ "{{.node}}" = "dns" ]'
+        msg: "invalid node '{{.node}}'; allowed values: 'vpn' or 'dns'"
+      - sh: '{{.TF}} state list | grep -q "module.{{.node}}"'
+        msg: "terraform state for node not found, apply configuration first"
     requires:
       vars:
-        - module
+        - node
     cmds:
       - |
         mkdir -p "{{.SSH_DIR}}"
-        CREDENTIALS_KEY="{{.module}}_node_credentials"
-        NODE_IP_KEY="{{.module}}_node_ip"
+        CREDENTIALS_KEY="{{.node}}_node_credentials"
+        NODE_IP_KEY="{{.node}}_node_ip"
         {{.TF}} output -json "$CREDENTIALS_KEY" | jq -r .ssh_private_key > "{{.ssh_key}}"
         chmod 0600 "{{.ssh_key}}"
         if [ "{{.connect}}" == "true" ]; then
