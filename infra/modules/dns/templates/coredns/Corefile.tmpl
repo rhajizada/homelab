@@ -1,0 +1,28 @@
+${base_domain}:53 {
+    log
+    errors
+
+    route53 ${base_domain}.:${aws_route53_zone_id} {
+        fallthrough
+    }
+
+    template IN A {
+        match ".*"
+        answer "{{.Name}} 60 IN A ${k8s_lb_ip}"
+    }
+
+    template IN AAAA {
+        match ".*"
+        answer "{{.Name}} 60 IN AAAA ::"
+    }
+}
+
+. {
+    log
+    errors
+
+    forward . tls://8.8.8.8 tls://8.8.4.4 {
+        except solocuplabs.com
+    }
+}
+

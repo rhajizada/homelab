@@ -1,0 +1,13 @@
+[Unit]
+Description=CoreDNS DNS Server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/coredns -conf /etc/coredns/Corefile
+Restart=on-failure
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+WorkingDirectory=/root
+
+[Install]
+WantedBy=multi-user.target
+

@@ -32,20 +32,12 @@ module "dns" {
   proxmox_node_name       = var.proxmox_secondary_node
   ip_address              = local.dns_ip
   base_domain             = var.base_domain
-  dns_entries = [
-    {
-      name  = "${var.base_domain}."
-      type  = "IN A"
-      value = local.k8s_lb_ip
-    },
-    {
-      name  = "${var.base_domain}."
-      type  = "IN A"
-      value = local.k8s_lb_ip
-    }
-  ]
-  vm_config    = var.dns_vm_config
-  ubuntu_image = proxmox_virtual_environment_download_file.ubuntu_image.id
+  aws_region              = module.route53.aws_region
+  aws_route53_zone_id     = module.route53.route_53_zone_id
+  aws_iam_credentials     = module.route53.coredns_iam_user
+  k8s_lb_ip               = local.k8s_lb_ip
+  vm_config               = var.dns_vm_config
+  ubuntu_image            = proxmox_virtual_environment_download_file.ubuntu_image.id
 }
 
 module "route53" {
