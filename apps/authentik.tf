@@ -4,7 +4,7 @@ locals {
     version   = "2024.12.3"
     host      = "authentik.${var.base_domain}"
     groups = {
-      gitea = ["gituser", "gitadmin", "gitrestricted"]
+      gitea = ["gituser", "gitadmin"]
     }
   }
 }
@@ -62,6 +62,7 @@ resource "helm_release" "authentik" {
   name       = "authentik"
   chart      = "goauthentik/authentik"
   version    = local.authentik.version
+  timeout    = 600
 
   values = [
     templatefile("${path.module}/templates/authentik.yaml.tmpl", {
@@ -123,12 +124,12 @@ resource "authentik_property_mapping_provider_scope" "gitea" {
   name       = "authentik gitea OAuth Mapping: OpenID 'gitea'"
   expression = <<EOF
 gitea_claims = {}
+gitea_claims["gitea"]= "restricted"
+
 if request.user.ak_groups.filter(name="gituser").exists():
     gitea_claims["gitea"]= "user"
 if request.user.ak_groups.filter(name="gitadmin").exists():
     gitea_claims["gitea"]= "admin"
-if request.user.ak_groups.filter(name="gitrestricted").exists():
-    gitea_claims["gitea"]= "restricted"
 
 return gitea_claims
 EOF

@@ -13,6 +13,9 @@ locals {
 resource "kubernetes_namespace" "gitea_namespace" {
   metadata {
     name = local.gitea.namespace
+    labels = {
+      "pod-security.kubernetes.io/enforce" = "privileged"
+    }
   }
 }
 
@@ -61,6 +64,7 @@ resource "helm_release" "gitea" {
   name      = "gitea"
   chart     = "gitea/gitea"
   version   = local.gitea.version
+  timeout   = 600
 
   values = [
     templatefile("${path.module}/templates/gitea.yaml.tmpl", {

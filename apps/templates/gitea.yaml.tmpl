@@ -23,8 +23,6 @@ gitea:
     oauth2_client:
       ENABLE_AUTO_REGISTRATION: true
       ACCOUNT_LINKING: auto
-    actions:
-      ENABLED: false
     admin:
       DISABLE_REGULAR_ORG_CREATION: true
 
@@ -43,3 +41,37 @@ ingress:
   - secretName: gitea-tls
     hosts:
     - "${host}"
+
+persistence:
+  enabled: true
+  create: true
+  mount: true
+  claimName: gitea-shared-storage
+  size: 10Gi
+  accessModes:
+    - ReadWriteMany
+
+actions:
+  enabled: true
+  statefulset:
+    dind:
+      securityContext:
+        privileged: true
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "0.5"
+        limits:
+          memory: "4Gi"
+          cpu: "2"
+    actRunner:
+      replicas: 3
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "0.5"
+        limits:
+          memory: "4Gi"
+          cpu: "2"
+  provisioning:
+    enabled: true
