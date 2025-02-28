@@ -4,7 +4,7 @@ locals {
     version   = "2024.12.3"
     host      = "authentik.${var.base_domain}"
     groups = {
-      gitea = ["gituser", "gitadmin"]
+      gitea = ["git-users", "git-admins"]
     }
   }
 }
@@ -126,9 +126,9 @@ resource "authentik_property_mapping_provider_scope" "gitea" {
 gitea_claims = {}
 gitea_claims["gitea"]= "restricted"
 
-if request.user.ak_groups.filter(name="gituser").exists():
+if request.user.ak_groups.filter(name="git-users").exists():
     gitea_claims["gitea"]= "user"
-if request.user.ak_groups.filter(name="gitadmin").exists():
+if request.user.ak_groups.filter(name="git-admins").exists():
     gitea_claims["gitea"]= "admin"
 
 return gitea_claims
