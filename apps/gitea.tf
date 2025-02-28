@@ -68,11 +68,12 @@ resource "helm_release" "gitea" {
 
   values = [
     templatefile("${path.module}/templates/gitea.yaml.tmpl", {
-      oauth_name          = "authentik"
-      oauth_discovery_url = "https://${local.authentik.host}/application/o/gitea-slug/.well-known/openid-configuration"
-      oauth_scopes        = "email profile gitea"
-      host                = local.gitea.host
-      cert_issuer         = var.cluster_cert_issuer
+      oauth_name             = "authentik"
+      oauth_group_claim_name = "gitea"
+      oauth_discovery_url    = "https://${local.authentik.host}/application/o/gitea-slug/.well-known/openid-configuration"
+      oauth_scopes           = "email profile gitea"
+      host                   = local.gitea.host
+      cert_issuer            = var.cluster_cert_issuer
     })
   ]
 }

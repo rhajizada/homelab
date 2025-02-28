@@ -6,6 +6,9 @@ gitea:
     autoDiscoverUrl: "${oauth_discovery_url}"
     iconUrl: "https://goauthentik.io/img/icon.png"
     scopes: "${oauth_scopes}"
+    groupClaimName:	"${oauth_group_claim_name}"
+    adminGroup: admin
+    restrictedGroup: restricted
   admin:
     existingSecret: gitea-admin-secret
   config:
@@ -57,21 +60,5 @@ actions:
     dind:
       securityContext:
         privileged: true
-      resources:
-        requests:
-          memory: "512Mi"
-          cpu: "0.5"
-        limits:
-          memory: "4Gi"
-          cpu: "2"
-    actRunner:
-      replicas: 3
-      resources:
-        requests:
-          memory: "512Mi"
-          cpu: "0.5"
-        limits:
-          memory: "4Gi"
-          cpu: "2"
   provisioning:
     enabled: true
