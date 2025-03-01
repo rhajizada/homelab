@@ -173,6 +173,7 @@ resource "authentik_application" "gitea" {
   name              = "Gitea"
   slug              = "gitea-slug"
   protocol_provider = authentik_provider_oauth2.gitea.id
+  meta_icon         = "https://raw.githubusercontent.com/go-gitea/gitea/b684f51d201bdeb389ee5be0aa6003694e89d03e/public/assets/img/logo.png"
 }
 
 
@@ -243,7 +244,8 @@ resource "authentik_provider_oauth2" "minio" {
 }
 
 resource "authentik_application" "minio" {
-  name              = "minio"
+  name              = "MinIO"
   slug              = "minio-slug"
   protocol_provider = authentik_provider_oauth2.minio.id
+  meta_icon         = "https://avatars.githubusercontent.com/u/695951?s=200&v=4"
 }
