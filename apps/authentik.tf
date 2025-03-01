@@ -5,8 +5,9 @@ locals {
     host      = "authentik.${var.base_domain}"
     groups = {
 
-      gitea = ["git-users", "git-admins"],
-      minio = ["minio-users", "minio-admins"]
+      gitea  = ["git-users", "git-admins"],
+      minio  = ["minio-users", "minio-admins"],
+      harbor = ["harbor-admins"]
     }
   }
 }
@@ -173,7 +174,7 @@ resource "authentik_application" "gitea" {
   name              = "Gitea"
   slug              = "gitea-slug"
   protocol_provider = authentik_provider_oauth2.gitea.id
-  meta_icon         = "https://raw.githubusercontent.com/go-gitea/gitea/b684f51d201bdeb389ee5be0aa6003694e89d03e/public/assets/img/logo.png"
+  meta_icon         = "https://about.gitea.com/gitea-text.svg"
 }
 
 
@@ -247,5 +248,50 @@ resource "authentik_application" "minio" {
   name              = "MinIO"
   slug              = "minio-slug"
   protocol_provider = authentik_provider_oauth2.minio.id
-  meta_icon         = "https://dl.min.io/logo/Minio_logo_light/Minio_logo_light.svg"
+  meta_icon         = "https://min.io/resources/img/logo.svg"
+}
+
+resource "random_password" "harbor_client_id" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "harbor_client_secret" {
+  length  = 64
+  special = true
+}
+
+resource "authentik_group" "harbor_groups" {
+  for_each = toset(local.authentik.groups.harbor)
+  name     = each.value
+}
+
+resource "authentik_provider_oauth2" "harbor" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name               = "harbor"
+  client_type        = "confidential"
+  client_id          = random_password.harbor_client_id.result
+  client_secret      = random_password.harbor_client_secret.result
+  authorization_flow = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  allowed_redirect_uris = [
+    {
+      matching_mode = "strict",
+      url           = "https://${local.harbor.host}/c/oidc/callback",
+    }
+  ]
+  property_mappings = [
+    data.authentik_property_mapping_provider_scope.email.id,
+    data.authentik_property_mapping_provider_scope.profile.id,
+    data.authentik_property_mapping_provider_scope.openid.id,
+  ]
+}
+
+resource "authentik_application" "harbor" {
+  name              = "Harbor"
+  slug              = "harbor-slug"
+  protocol_provider = authentik_provider_oauth2.harbor.id
+  meta_icon         = "https://goharbor.io/img/logos/harbor-horizontal-color.svg"
 }

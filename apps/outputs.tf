@@ -22,3 +22,9 @@ output "minio_admin_credentials" {
   }
   sensitive = true
 }
+
+output "harbor_admin_password" {
+  description = "harbor admin password"
+  value       = random_password.harbor_admin_password.result
+  sensitive   = true
+}
