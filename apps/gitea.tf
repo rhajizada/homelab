@@ -7,6 +7,7 @@ locals {
       username = "gitea_admin"
       email    = "gitea@${var.base_domain}"
     }
+    storage_size = "64Gi"
   }
 }
 
@@ -74,6 +75,7 @@ resource "helm_release" "gitea" {
       oauth_scopes           = "email profile gitea"
       host                   = local.gitea.host
       cert_issuer            = var.cluster_cert_issuer
+      storage_size           = local.gitea.storage_size
     })
   ]
 }

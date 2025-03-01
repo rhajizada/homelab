@@ -28,6 +28,10 @@ gitea:
       ACCOUNT_LINKING: auto
     admin:
       DISABLE_REGULAR_ORG_CREATION: true
+    packages:
+      ENABLED: true
+    mirror:
+      ENABLED: true
 
 ingress:
   enabled: true
@@ -50,7 +54,7 @@ persistence:
   create: true
   mount: true
   claimName: gitea-shared-storage
-  size: 10Gi
+  size: ${storage_size}
   accessModes:
     - ReadWriteMany
 
