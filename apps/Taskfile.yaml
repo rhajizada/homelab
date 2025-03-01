@@ -76,3 +76,43 @@ tasks:
     cmds:
       - |
         {{.TF}} fmt -recursive .
+
+  secrets:
+    desc: "Show bootstrap/admin credentials for a specified app"
+    preconditions:
+      - sh: '[ "{{.app}}" = "authentik" ] || [ "{{.app}}" = "gitea" ] || [ "{{.app}}" = "minio" ] || [ "{{.app}}" = "harbor" ]'
+        msg: "invalid app '{{.app}}'. Valid options are: authentik, gitea, minio, harbor."
+    cmds:
+      - |
+        case "{{.app}}" in
+          authentik)
+            echo "Password: $({{.TF}} output -json | jq -r '.authentik_bootstrap_password.value')"
+            ;;
+          gitea)
+            echo "Username: $({{.TF}} output -json | jq -r '.gitea_admin_credentials.value.username')"
+            echo "Password: $({{.TF}} output -json | jq -r '.gitea_admin_credentials.value.password')"
+            ;;
+          minio)
+            echo "Username: $({{.TF}} output -json | jq -r '.minio_admin_credentials.value.username')"
+            echo "Password: $({{.TF}} output -json | jq -r '.minio_admin_credentials.value.password')"
+            ;;
+          harbor)
+            echo "Password: $({{.TF}} output -json | jq -r '.harbor_admin_password.value')"
+            ;;
+        esac
+    silent: true
+    vars:
+      app: '{{.app | default ""}}'
+
+  scale-runners:
+    desc: "Scale Gitea action runners to the specified count (0-10)"
+    preconditions:
+      - sh: '[ "{{.count}}" -ge 0 ] && [ "{{.count}}" -le 10 ]'
+        msg: "Count must be an integer between 0 and 10."
+      - sh: "kubectl get statefulset gitea-act-runner -n gitea &> /dev/null"
+        msg: "StatefulSet 'gitea-act-runner' does not exist in the 'gitea' namespace."
+    cmds:
+      - |
+        kubectl scale statefulset gitea-act-runner --replicas={{.count}} -n gitea
+    vars:
+      count: '{{.count | default ""}}'
