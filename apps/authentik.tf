@@ -158,7 +158,7 @@ resource "authentik_provider_oauth2" "gitea" {
   allowed_redirect_uris = [
     {
       matching_mode = "strict",
-      url           = "https://git.${var.base_domain}/user/oauth2/authentik/callback",
+      url           = "https://${local.gitea.host}/user/oauth2/authentik/callback",
     }
   ]
   property_mappings = [
@@ -247,5 +247,5 @@ resource "authentik_application" "minio" {
   name              = "MinIO"
   slug              = "minio-slug"
   protocol_provider = authentik_provider_oauth2.minio.id
-  meta_icon         = "https://avatars.githubusercontent.com/u/695951?s=200&v=4"
+  meta_icon         = "https://dl.min.io/logo/Minio_logo_light/Minio_logo_light.svg"
 }
