@@ -13,3 +13,12 @@ output "gitea_admin_credentials" {
   }
   sensitive = true
 }
+
+output "minio_admin_credentials" {
+  description = "minio admin user credentials"
+  value = {
+    username = local.minio.admin.username
+    password = random_password.minio_admin_password.result
+  }
+  sensitive = true
+}

@@ -1,0 +1,48 @@
+auth:
+  existingSecret: minio-admin-secret
+  rootUserSecretKey: username
+  rootPasswordSecretKey: password
+
+tls:
+  existingSecret: minio-tls
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  hostname: ${host}
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: ${cert_issuer}
+  tls:
+    - secretName: minio-tls
+      hosts:
+        - ${host}
+
+extraEnvVars:
+  - name: MINIO_LOG_LEVEL
+    value: "trace"
+  - name: MINIO_IDENTITY_OPENID_CONFIG_URL
+    value: ${openid_config_url}
+  - name: MINIO_IDENTITY_OPENID_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: minio-authentik-secret
+        key: key
+  - name: MINIO_IDENTITY_OPENID_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: minio-authentik-secret
+        key: secret
+  - name: MINIO_IDENTITY_OPENID_SCOPES
+    value: ${openid_scopes}
+  - name: MINIO_IDENTITY_OPENID_REDIRECT_URI
+    value: ${openid_redirect_uri}
+  - name: MINIO_IDENTITY_OPENID_DISPLAY_NAME
+    value: "Sign in with Authentik"
+
+
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteMany
+  size: ${storage_size}
