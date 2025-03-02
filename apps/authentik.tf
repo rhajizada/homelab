@@ -175,7 +175,7 @@ resource "authentik_application" "gitea" {
   name              = "Gitea"
   slug              = "gitea-slug"
   protocol_provider = authentik_provider_oauth2.gitea.id
-  meta_icon         = "https://about.gitea.com/gitea-text.svg"
+  meta_icon         = "https://simpleicons.org/icons/gitea.svg"
 }
 
 
@@ -249,7 +249,7 @@ resource "authentik_application" "minio" {
   name              = "MinIO"
   slug              = "minio-slug"
   protocol_provider = authentik_provider_oauth2.minio.id
-  meta_icon         = "https://min.io/resources/img/logo.svg"
+  meta_icon         = "https://simpleicons.org/icons/minio.svg"
 }
 
 resource "random_password" "harbor_client_id" {
@@ -295,7 +295,7 @@ resource "authentik_application" "harbor" {
   name              = "Harbor"
   slug              = "harbor-slug"
   protocol_provider = authentik_provider_oauth2.harbor.id
-  meta_icon         = "https://goharbor.io/img/logos/harbor-horizontal-color.svg"
+  meta_icon         = "https://simpleicons.org/icons/harbor.svg"
 }
 
 resource "random_password" "grafana_client_id" {
@@ -341,5 +341,5 @@ resource "authentik_application" "grafana" {
   name              = "grafana"
   slug              = "grafana-slug"
   protocol_provider = authentik_provider_oauth2.grafana.id
-  meta_icon         = "https://grafana.com/static/img/menu/grafana2.svg"
+  meta_icon         = "https://simpleicons.org/icons/grafana.svg"
 }
