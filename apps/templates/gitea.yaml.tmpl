@@ -6,7 +6,7 @@ gitea:
     autoDiscoverUrl: "${oauth_discovery_url}"
     iconUrl: "https://goauthentik.io/img/icon.png"
     scopes: "${oauth_scopes}"
-    groupClaimName:	"${oauth_group_claim_name}"
+    groupClaimName: "${oauth_group_claim_name}"
     adminGroup: admin
     restrictedGroup: restricted
   admin:
@@ -32,6 +32,8 @@ gitea:
       ENABLED: true
     mirror:
       ENABLED: true
+  metrics:
+    enabled: true
 
 ingress:
   enabled: true
@@ -55,6 +57,7 @@ persistence:
   mount: true
   claimName: gitea-shared-storage
   size: ${storage_size}
+  volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
 

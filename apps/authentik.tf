@@ -338,7 +338,7 @@ resource "authentik_provider_oauth2" "grafana" {
 }
 
 resource "authentik_application" "grafana" {
-  name              = "grafana"
+  name              = "Grafana"
   slug              = "grafana-slug"
   protocol_provider = authentik_provider_oauth2.grafana.id
   meta_icon         = "https://simpleicons.org/icons/grafana.svg"
