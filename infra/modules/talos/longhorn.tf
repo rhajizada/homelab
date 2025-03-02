@@ -1,14 +1,19 @@
 locals {
   longhorn = {
-    version = "1.8.0"
+    repository = "https://charts.longhorn.io/"
+    chart      = "longhorn"
+    version    = "1.8.0"
+    namespace  = "longhorn-system"
   }
 }
 
 data "helm_template" "longhorn" {
-  namespace    = "longhorn-system"
-  name         = "longhorn"
-  chart        = "longhorn/longhorn"
-  version      = local.longhorn.version
+  name       = "longhorn"
+  repository = local.longhorn.repository
+  chart      = local.longhorn.chart
+  version    = local.longhorn.version
+
+  namespace    = local.longhorn.namespace
   kube_version = var.k8s_version
 
   values = [file("${path.module}/templates/longhorn.yaml")]

@@ -3,10 +3,16 @@ locals {
     username      = "admin"
     password      = random_password.traefik_dashboard.result
     dashboard_dns = "traefik.${var.base_domain}"
-    version       = "34.1.0"
+
+    repository = "https://traefik.github.io/charts/"
+    chart      = "traefik"
+    version    = "34.1.0"
+    namespace  = "traefik"
   }
   traefik_crds = {
-    version = "1.2.0"
+    repository = "https://traefik.github.io/charts/"
+    chart      = "traefik-crds"
+    version    = "1.2.0"
   }
 }
 
@@ -16,20 +22,24 @@ resource "random_password" "traefik_dashboard" {
 }
 
 data "helm_template" "traefik_crds" {
-  namespace    = "traefik"
-  name         = "traefik-crds"
-  chart        = "traefik/traefik-crds"
-  version      = local.traefik_crds.version
+  name       = "traefik-crds"
+  repository = local.traefik_crds.repository
+  chart      = local.traefik_crds.chart
+  version    = local.traefik_crds.version
+
+  namespace    = local.traefik.namespace
   kube_version = var.k8s_version
 
 }
 
 
 data "helm_template" "traefik" {
-  namespace    = "traefik"
-  name         = "traefik"
-  chart        = "traefik/traefik"
-  version      = local.traefik.version
+  name       = "traefik"
+  repository = local.traefik.repository
+  chart      = local.traefik.chart
+  version    = local.traefik.version
+
+  namespace    = local.traefik.namespace
   kube_version = var.k8s_version
 
   values = [

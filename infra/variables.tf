@@ -137,7 +137,7 @@ variable "talos_vm_config" {
 variable "ubuntu_version" {
   description = "Version of Ubuntu to deploy for VPN VM"
   type        = string
-  default     = "noble"
+  default     = "24.10"
 }
 
 variable "vpn_vm_config" {
