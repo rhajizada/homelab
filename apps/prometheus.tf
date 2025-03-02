@@ -1,5 +1,7 @@
 locals {
   prometheus = {
+    repository                 = "https://prometheus-community.github.io/helm-charts"
+    chart                      = "prometheus"
     version                    = "27.5.1"
     namespace                  = "prometheus"
     storage_size               = "8Gi"
@@ -17,12 +19,15 @@ resource "kubernetes_namespace" "prometheus_namespace" {
 }
 
 resource "helm_release" "prometheus" {
-  depends_on = [kubernetes_namespace.prometheus_namespace]
-  namespace  = local.prometheus.namespace
-  name       = "prometheus"
-  chart      = "prometheus-community/prometheus"
-  version    = local.prometheus.version
+  depends_on = [
+    kubernetes_namespace.prometheus_namespace
+  ]
 
+  name       = "prometheus"
+  repository = local.prometheus.repository
+  chart      = local.prometheus.chart
+  version    = local.prometheus.version
+  namespace  = local.prometheus.namespace
 
   values = [
     templatefile("${path.module}/templates/prometheus.yaml.tmpl", {

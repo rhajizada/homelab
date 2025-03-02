@@ -1,10 +1,12 @@
 locals {
   authentik = {
-    namespace = "authentik"
-    version   = "2024.12.3"
-    host      = "authentik.${var.base_domain}"
-    groups = {
+    repository = "https://charts.goauthentik.io/"
+    chart      = "authentik"
+    version    = "2024.12.3"
+    namespace  = "authentik"
 
+    host = "authentik.${var.base_domain}"
+    groups = {
       gitea   = ["git-users", "git-admins"],
       minio   = ["minio-users", "minio-admins"],
       harbor  = ["harbor-admins"]
@@ -61,12 +63,18 @@ resource "kubernetes_secret" "authentik_secrets" {
 }
 
 resource "helm_release" "authentik" {
-  depends_on = [kubernetes_namespace.authentik_namespace, kubernetes_secret.authentik_secrets]
-  namespace  = local.authentik.namespace
+  depends_on = [
+    kubernetes_namespace.authentik_namespace,
+    kubernetes_secret.authentik_secrets
+  ]
+
   name       = "authentik"
-  chart      = "goauthentik/authentik"
+  repository = local.authentik.repository
+  chart      = local.authentik.chart
   version    = local.authentik.version
-  timeout    = 600
+  namespace  = local.authentik.namespace
+
+  timeout = 600
 
   values = [
     templatefile("${path.module}/templates/authentik.yaml.tmpl", {

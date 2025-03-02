@@ -1,8 +1,11 @@
 locals {
   harbor = {
-    version      = "1.16.2"
+    repository = "https://helm.goharbor.io"
+    chart      = "harbor"
+    version    = "1.16.2"
+    namespace  = "harbor"
+
     host         = "harbor.${var.base_domain}"
-    namespace    = "harbor"
     storage_size = "64Gi"
   }
 }
@@ -56,7 +59,7 @@ resource "kubernetes_secret" "harbor_oidc_config" {
   }
 
   data = {
-    config_overwrite_json = "{\"auth_mode\": \"oidc_auth\", \"oidc_name\": \"Authentik\", \"oidc_endpoint\": \"https://${local.authentik.host}/application/o/harbor-slug/\", \"oidc_client_id\": \"${random_password.harbor_client_id.result}\", \"oidc_client_secret\": \"${random_password.harbor_client_secret.result}\", \"oidc_groups_claim\": \"groups\", \"oidc_admin_group\": \"harbor-admins\", \"oidc_scope\": \"openid,profile,email\", \"oidc_verify_cert\": \"true\", \"oidc_auto_onboard\": \"true\", \"oidc_user_claim\": \"preferred_username\"}"
+    config_overwrite_json = "{\"auth_mode\": \"oidc_auth\", \"oidc_name\": \"authentik\", \"oidc_endpoint\": \"https://${local.authentik.host}/application/o/harbor-slug/\", \"oidc_client_id\": \"${random_password.harbor_client_id.result}\", \"oidc_client_secret\": \"${random_password.harbor_client_secret.result}\", \"oidc_groups_claim\": \"groups\", \"oidc_admin_group\": \"harbor-admins\", \"oidc_scope\": \"openid,profile,email\", \"oidc_verify_cert\": \"true\", \"oidc_auto_onboard\": \"true\", \"oidc_user_claim\": \"preferred_username\"}"
   }
 
   type = "Opaque"
@@ -70,11 +73,14 @@ resource "helm_release" "harbor" {
     authentik_provider_oauth2.harbor,
     authentik_application.harbor
   ]
-  namespace = local.harbor.namespace
-  name      = "harbor"
-  chart     = "harbor/harbor"
-  version   = local.harbor.version
-  timeout   = 600
+
+  name       = "harbor"
+  repository = local.harbor.repository
+  chart      = local.harbor.chart
+  version    = local.harbor.version
+  namespace  = local.harbor.namespace
+
+  timeout = 600
 
   values = [
     templatefile("${path.module}/templates/harbor.yaml.tmpl", {

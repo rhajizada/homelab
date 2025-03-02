@@ -20,7 +20,7 @@ ingress:
 
 extraEnvVars:
   - name: MINIO_LOG_LEVEL
-    value: "trace"
+    value: "info"
   - name: MINIO_IDENTITY_OPENID_CONFIG_URL
     value: ${openid_config_url}
   - name: MINIO_IDENTITY_OPENID_CLIENT_ID
@@ -38,7 +38,7 @@ extraEnvVars:
   - name: MINIO_IDENTITY_OPENID_REDIRECT_URI
     value: ${openid_redirect_uri}
   - name: MINIO_IDENTITY_OPENID_DISPLAY_NAME
-    value: "Sign in with Authentik"
+    value: "Sign in with authentik"
 
 
 persistence:

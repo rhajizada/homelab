@@ -1,7 +1,10 @@
 locals {
   grafana = {
-    version   = "8.10.1"
-    namespace = "grafana"
+    repository = "https://grafana.github.io/helm-charts/"
+    chart      = "grafana"
+    version    = "8.10.1"
+    namespace  = "grafana"
+
     admin = {
       username = "admin"
     }
@@ -55,15 +58,17 @@ resource "helm_release" "grafana" {
     authentik_application.grafana,
     kubernetes_secret.grafana_authentik_secret
   ]
-  namespace = local.grafana.namespace
-  name      = "grafana"
-  chart     = "grafana/grafana"
-  version   = local.grafana.version
+
+  name       = "grafana"
+  repository = local.grafana.repository
+  chart      = local.grafana.chart
+  version    = local.grafana.version
+  namespace  = local.grafana.namespace
 
 
   values = [
     templatefile("${path.module}/templates/grafana.yaml.tmpl", {
-      oauth_name     = "Authentik"
+      oauth_name     = "authentik"
       oauth_slug     = "grafana-slug"
       oauth_scopes   = "openid profile email"
       authentik_host = local.authentik.host

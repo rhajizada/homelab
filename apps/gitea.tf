@@ -1,8 +1,11 @@
 locals {
   gitea = {
-    version   = "10.6.0"
-    host      = "git.${var.base_domain}"
-    namespace = "gitea"
+    repository = "https://dl.gitea.com/charts/"
+    chart      = "gitea"
+    version    = "10.6.0"
+    namespace  = "gitea"
+
+    host = "git.${var.base_domain}"
     admin = {
       username = "gitea_admin"
       email    = "gitea@${var.base_domain}"
@@ -61,11 +64,14 @@ resource "helm_release" "gitea" {
     kubernetes_secret.gitea_authentik_secret,
     authentik_provider_oauth2.gitea,
   authentik_application.gitea]
-  namespace = local.gitea.namespace
-  name      = "gitea"
-  chart     = "gitea/gitea"
-  version   = local.gitea.version
-  timeout   = 600
+
+  name       = "gitea"
+  repository = local.gitea.repository
+  chart      = local.gitea.chart
+  version    = local.gitea.version
+  namespace  = local.gitea.namespace
+
+  timeout = 600
 
   values = [
     templatefile("${path.module}/templates/gitea.yaml.tmpl", {

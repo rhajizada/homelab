@@ -29,6 +29,9 @@ persistence:
     registry:
       accessMode: ReadWriteMany
       size: '${storage_size}'
+    jobservice:
+      jobLog:
+        accessMode: ReadWriteMany
   imageChartStorage:
     disableredirect: false
     type: filesystem

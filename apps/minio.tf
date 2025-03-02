@@ -1,8 +1,10 @@
 locals {
   minio = {
+    chart     = "oci://registry-1.docker.io/bitnamicharts/minio"
     version   = "15.0.4"
-    host      = "minio.${var.base_domain}"
     namespace = "minio"
+
+    host = "minio.${var.base_domain}"
     admin = {
       username = "admin"
     }
@@ -55,12 +57,15 @@ resource "helm_release" "minio" {
     kubernetes_secret.minio_admin_secret,
     kubernetes_secret.minio_authentik_secret,
     authentik_provider_oauth2.minio,
-  authentik_application.minio]
-  namespace = local.minio.namespace
+    authentik_application.minio
+  ]
+
   name      = "minio"
-  chart     = "bitnami/minio"
+  chart     = local.minio.chart
   version   = local.minio.version
-  timeout   = 600
+  namespace = local.minio.namespace
+
+  timeout = 600
 
   values = [
     templatefile("${path.module}/templates/minio.yaml.tmpl", {
