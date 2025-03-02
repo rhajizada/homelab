@@ -14,11 +14,11 @@ output "gitea_admin_credentials" {
   sensitive = true
 }
 
-output "minio_admin_credentials" {
-  description = "minio admin user credentials"
+output "grafana_admin_credentials" {
+  description = "grafana admin user credentials"
   value = {
-    username = local.minio.admin.username
-    password = random_password.minio_admin_password.result
+    username = local.grafana.admin.username
+    password = random_password.grafana_admin_password.result
   }
   sensitive = true
 }
@@ -28,3 +28,13 @@ output "harbor_admin_password" {
   value       = random_password.harbor_admin_password.result
   sensitive   = true
 }
+
+output "minio_admin_credentials" {
+  description = "minio admin user credentials"
+  value = {
+    username = local.minio.admin.username
+    password = random_password.minio_admin_password.result
+  }
+  sensitive = true
+}
+

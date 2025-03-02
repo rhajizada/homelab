@@ -5,9 +5,10 @@ locals {
     host      = "authentik.${var.base_domain}"
     groups = {
 
-      gitea  = ["git-users", "git-admins"],
-      minio  = ["minio-users", "minio-admins"],
-      harbor = ["harbor-admins"]
+      gitea   = ["git-users", "git-admins"],
+      minio   = ["minio-users", "minio-admins"],
+      harbor  = ["harbor-admins"]
+      grafana = ["grafana-editors", "grafana-admins"]
     }
   }
 }
@@ -287,6 +288,7 @@ resource "authentik_provider_oauth2" "harbor" {
     data.authentik_property_mapping_provider_scope.profile.id,
     data.authentik_property_mapping_provider_scope.openid.id,
   ]
+  signing_key = data.authentik_certificate_key_pair.generated.id
 }
 
 resource "authentik_application" "harbor" {
@@ -294,4 +296,50 @@ resource "authentik_application" "harbor" {
   slug              = "harbor-slug"
   protocol_provider = authentik_provider_oauth2.harbor.id
   meta_icon         = "https://goharbor.io/img/logos/harbor-horizontal-color.svg"
+}
+
+resource "random_password" "grafana_client_id" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "grafana_client_secret" {
+  length  = 64
+  special = true
+}
+
+resource "authentik_group" "grafana_groups" {
+  for_each = toset(local.authentik.groups.grafana)
+  name     = each.value
+}
+
+resource "authentik_provider_oauth2" "grafana" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name               = "grafana"
+  client_type        = "confidential"
+  client_id          = random_password.grafana_client_id.result
+  client_secret      = random_password.grafana_client_secret.result
+  authorization_flow = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  allowed_redirect_uris = [
+    {
+      matching_mode = "strict",
+      url           = "https://${local.grafana.host}/login/generic_oauth",
+    }
+  ]
+  property_mappings = [
+    data.authentik_property_mapping_provider_scope.email.id,
+    data.authentik_property_mapping_provider_scope.profile.id,
+    data.authentik_property_mapping_provider_scope.openid.id,
+  ]
+  signing_key = data.authentik_certificate_key_pair.generated.id
+}
+
+resource "authentik_application" "grafana" {
+  name              = "grafana"
+  slug              = "grafana-slug"
+  protocol_provider = authentik_provider_oauth2.grafana.id
+  meta_icon         = "https://grafana.com/static/img/menu/grafana2.svg"
 }

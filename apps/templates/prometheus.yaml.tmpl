@@ -1,0 +1,37 @@
+ingress:
+  enabled: false
+
+service:
+  type: ClusterIP
+
+server:
+  extraFlags:
+    - web.enable-lifecycle
+  retention: "15d"
+
+persistentVolume:
+  enabled: true
+  size: ${storage_size}
+  accessMode: ReadWriteMany
+
+alertmanager:
+  enabled: true
+  persistence:
+    size: ${alert_manager_storage_size}
+    accessMode: ReadWriteMany
+
+kube-state-metrics:
+  enabled: true
+
+prometheus-node-exporter:
+  enabled: true
+
+
+prometheus-node-exporter:
+  rbac:
+    pspEnabled: false
+  podAnnotations:
+    pod-security.kubernetes.io/enforce: privileged
+
+prometheus-pushgateway:
+  enabled: true
