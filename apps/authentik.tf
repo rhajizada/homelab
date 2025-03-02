@@ -152,7 +152,7 @@ resource "authentik_provider_oauth2" "gitea" {
     helm_release.authentik,
     authentik_property_mapping_provider_scope.gitea
   ]
-  name               = "Gitea"
+  name               = "gitea"
   client_id          = random_password.gitea_client_id.result
   client_secret      = random_password.gitea_client_secret.result
   authorization_flow = data.authentik_flow.default_authorization_flow.id
