@@ -82,7 +82,7 @@ locals {
         {
           name = "traefik-namespace"
           contents = templatefile("${path.module}/templates/namespace.yaml.tmpl", {
-            namespace = "traefik"
+            namespace = local.traefik.namespace
           })
         },
         {
@@ -96,7 +96,7 @@ locals {
         {
           name = "longhorn-namespace"
           contents = templatefile("${path.module}/templates/namespace.yaml.tmpl", {
-            namespace = "longhorn-system"
+            namespace = local.longhorn.namespace
           })
         },
         {

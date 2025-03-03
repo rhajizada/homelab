@@ -42,20 +42,29 @@ variable "base_domain" {
 
   validation {
     condition     = can(regex("^([a-zA-Z0-9][-a-zA-Z0-9]*\\.)+[a-zA-Z]{2,}$", var.base_domain)) || var.base_domain == ""
-    error_message = "'base_domain' must be a valid domain name or an empty string."
+    error_message = "'base_domain' must be a valid domain name or an empty string"
   }
 }
 
-
-variable "dns_entries" {
-  description = "List of DNS subdomains and IPs"
-  type = list(object({
-    name  = string
-    type  = string
-    value = string
-  }))
-  default = []
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
 }
+
+variable "aws_route53_zone_id" {
+  description = "AWS Route 53 hosted zone id"
+  type        = string
+}
+
+
+variable "aws_iam_credentials" {
+  description = "AWS IAM user credentials for cert-manager"
+  type = object({
+    access_key_id     = string
+    secret_access_key = string
+  })
+}
+
 
 variable "ip_address" {
   description = "IP address of DNS VM instance"
@@ -102,4 +111,9 @@ variable "vm_config" {
     memory  = 2048
     network = "vmbr0"
   }
+}
+
+variable "k8s_lb_ip" {
+  description = "Kubernetes load balancer IP"
+  type        = string
 }

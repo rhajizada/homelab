@@ -1,7 +1,7 @@
 locals {
   image = {
-    file_name = "${var.ubuntu_version}-server-cloudimg-amd64.img",
-    url       = "https://cloud-images.ubuntu.com/${var.ubuntu_version}/current/${var.ubuntu_version}-server-cloudimg-amd64.img"
+    file_name = "ubuntu-${var.ubuntu_version}-server-cloudimg-amd64.img",
+    url       = "https://cloud-images.ubuntu.com/releases/${var.ubuntu_version}/release/ubuntu-${var.ubuntu_version}-server-cloudimg-amd64.img"
   }
 }
 

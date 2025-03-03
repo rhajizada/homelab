@@ -1,0 +1,55 @@
+admin:
+  existingSecret: "grafana-admin-secret"
+  userKey: user
+  passwordKey: password
+
+grafana.ini:
+  auth:
+    oauth_auto_login: false
+  auth.generic_oauth:
+    enabled: true
+    name: ${oauth_name}
+    icon: "https://goauthentik.io/img/icon.png"
+    client_id: "$__file{/etc/secrets/auth_generic_oauth/client_id}"
+    client_secret: "$__file{/etc/secrets/auth_generic_oauth/client_secret}"
+    auth_url: "https://${authentik_host}/application/o/authorize/"
+    token_url: "https://${authentik_host}/application/o/token/"
+    api_url: "https://${authentik_host}/application/o/userinfo/"
+    scopes: ${oauth_scopes}
+    allos_sign_up: true
+    allow_assign_grafana_admin: true
+    role_attribute_path: contains(groups, 'grafana-admins') && 'Admin' || contains(groups, 'grafana-editors') && 'Editor' || 'Viewer'
+    signout_redirect_url: "https://${authentik_host}/application/o/${oauth_slug}/end-session/"
+  server:
+    domain: ${host}
+    root_url: "https://${host}"
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.prometheus.svc.cluster.local
+        isDefault: true
+
+extraSecretMounts:
+  - name: grafana-authentik-secret-mount
+    secretName: grafana-authentik-secret
+    defaultMode: 0440
+    mountPath: /etc/secrets/auth_generic_oauth
+    readOnly: true
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: "${cert_issuer}"
+  hosts:
+    - ${host}
+  tls:
+  - secretName: grafana-tls
+    hosts:
+    - "${host}"

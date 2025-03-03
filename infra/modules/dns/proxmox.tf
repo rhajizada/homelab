@@ -3,11 +3,25 @@ locals {
     name     = "${var.cluster_name}-${var.environment}-dns"
     username = "root"
   }
-  unbound_configuration = templatefile("${path.module}/templates/unbound.conf.tmpl", {
-    base_domain = var.base_domain
-    dns_entries = var.dns_entries
+
+  aws_credentials = templatefile("${path.module}/templates/aws/credentials.tmpl", {
+    access_key_id     = var.aws_iam_credentials.access_key_id
+    secret_access_key = var.aws_iam_credentials.secret_access_key
   })
 
+  aws_config = templatefile("${path.module}/templates/aws/config.tmpl", {
+    aws_region = var.aws_region
+  })
+
+  coredns = {
+    version = "1.12.0"
+    service = templatefile("${path.module}/templates/coredns/coredns.service.tmpl", {})
+    config = templatefile("${path.module}/templates/coredns/Corefile.tmpl", {
+      base_domain         = var.base_domain
+      aws_route53_zone_id = var.aws_route53_zone_id
+      k8s_lb_ip           = var.k8s_lb_ip
+    })
+  }
   resolved_configuration = templatefile("${path.module}/templates/resolved.conf.tmpl", {})
 }
 
@@ -40,27 +54,40 @@ resource "proxmox_virtual_environment_file" "dns_user_data" {
       ssh_pwauth: false
       write_files:
         - content: |
-            ${indent(6, local.unbound_configuration)}
-          path: /etc/unbound/unbound.conf
+            ${indent(6, local.coredns.config)}
+          path: /etc/coredns/Corefile
+          permissions: '0644'
+        - content: |
+            ${indent(6, local.coredns.service)}
+          path: /etc/systemd/system/coredns.service
           permissions: '0644'
         - content: |
             ${indent(6, local.resolved_configuration)}
           path: /etc/systemd/resolved.conf
           permissions: '0644'
+        - content: |
+            ${indent(6, local.aws_config)}
+          path: /root/.aws/config
+          permissions: '0644'
+        - content: |
+            ${indent(6, local.aws_credentials)}
+          path: /root/.aws/credentials
+          permissions: '0644'
       runcmd:
         - apt update
         - apt upgrade
-        - apt install -y qemu-guest-agent unbound
-        - groupadd -r unbound
-        - useradd -r -g unbound -s /usr/sbin/nologin unbound
-        - chown -R unbound:unbound /etc/unbound
-        - chown -R unbound:unbound /var/lib/unbound
-        - chmod -R 750 /etc/unbound
+        - apt install -y qemu-guest-agent
+        - cd /tmp
+        - wget https://github.com/coredns/coredns/releases/download/v${local.coredns.version}/coredns_${local.coredns.version}_linux_amd64.tgz
+        - tar -xzvf coredns_${local.coredns.version}_linux_amd64.tgz
+        - mv coredns /usr/bin/
+        - cd --
+        - systemctl daemon-reload
         - systemctl enable qemu-guest-agent
         - systemctl start qemu-guest-agent
         - systemctl restart systemd-resolved
-        - systemctl enable unbound
-        - systemctl restart unbound
+        - systemctl enable coredns
+        - systemctl start coredns
         - echo "done" > /tmp/cloud-config.done
     EOF
 

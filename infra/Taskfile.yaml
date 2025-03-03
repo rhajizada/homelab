@@ -1,15 +1,8 @@
 version: "3"
 
 vars:
-  TF_BACKEND_ENCRYPT: true
-  TF_BACKEND_S3_BUCKET: "tf-{{.NAME}}-{{.ENV}}-state"
-  TF_BACKEND_S3_KEY: "{{.NAME}}.tfstate"
-  TF_BACKEND_S3_REGION: "us-east-1"
-  TF_BACKEND_ARGS: |
-    -backend-config="encrypt={{.TF_BACKEND_ENCRYPT}}"
-    -backend-config="bucket={{.TF_BACKEND_S3_BUCKET}}"
-    -backend-config="key={{.TF_BACKEND_S3_KEY}}"
-    -backend-config="region={{.TF_BACKEND_S3_REGION}}"
+  TF_BACKEND_S3_KEY: "infra/{{.ENV}}.tfstate"
+  TF_BACKEND_ARGS: -backend-config="encrypt={{.TF_BACKEND_ENCRYPT}}" -backend-config="bucket={{.TF_BACKEND_S3_BUCKET}}" -backend-config="key={{.TF_BACKEND_S3_KEY}}" -backend-config="region={{.TF_BACKEND_S3_REGION}}"
   TFVAR_FILE: "{{.ENV}}.tfvars"
 
 tasks:
@@ -18,7 +11,7 @@ tasks:
     cmds:
       - |
         aws s3api list-buckets --query "Buckets[].Name" --output json | grep -q '"{{.TF_BACKEND_S3_BUCKET}}"' || \
-        aws s3api create-bucket --bucket {{.TF_BACKEND_S3_BUCKET}} --region {{.TF_BACKEND_S3_REGION}} --create-bucket-configuration LocationConstraint={{.S3_REGION}}
+        aws s3api create-bucket --bucket {{.TF_BACKEND_S3_BUCKET}} --region {{.TF_BACKEND_S3_REGION}} --endpoint-url https://s3.amazonaws.com
         aws s3api put-bucket-versioning --bucket {{.TF_BACKEND_S3_BUCKET}} --versioning-configuration Status=Enabled
         aws s3api put-bucket-tagging --bucket {{.TF_BACKEND_S3_BUCKET}} --tagging 'TagSet=[{Key=env,Value={{.ENV}}}]'
     silent: true
@@ -30,11 +23,11 @@ tasks:
     cmds:
       - |
         if [ -z "{{.module}}" ]; then
-          {{.TF}} -chdir=terraform init {{.TF_ARGS}}
+          {{.TF}} init {{.TF_BACKEND_ARGS}}
         else
-          {{.TF}} -chdir=terraform/modules/{{.module}} init
+          {{.TF}} -chdir=./modules/{{.module}} init
         fi
-    silent: true
+    silent: false
     vars:
       module: '{{.module | default ""}}'
 
@@ -43,9 +36,9 @@ tasks:
     cmds:
       - |
         if [ -z "{{.module}}" ]; then
-          {{.TF}} -chdir=terraform validate
+          {{.TF}} validate
         else
-          {{.TF}} -chdir=terraform validate -target=module.{{.module}}
+          {{.TF}} validate -target=module.{{.module}}
         fi
     silent: true
     vars:
@@ -56,9 +49,9 @@ tasks:
     cmds:
       - |
         if [ -z "{{.module}}" ]; then
-          {{.TF}} -chdir=terraform plan -var-file={{.TFVAR_FILE}}
+          {{.TF}} plan -var-file={{.TFVAR_FILE}}
         else
-          {{.TF}} -chdir=terraform plan -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+          {{.TF}} plan -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
         fi
     silent: true
     vars:
@@ -69,9 +62,9 @@ tasks:
     cmds:
       - |
         if [ -z "{{.module}}" ]; then
-          {{.TF}} -chdir=terraform apply -var-file={{.TFVAR_FILE}}
+          {{.TF}} apply -var-file={{.TFVAR_FILE}}
         else
-          {{.TF}} -chdir=terraform apply -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+          {{.TF}} apply -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
         fi
     silent: true
     vars:
@@ -82,9 +75,9 @@ tasks:
     cmds:
       - |
         if [ -z "{{.module}}" ]; then
-          {{.TF}} -chdir=terraform destroy -var-file={{.TFVAR_FILE}}
+          {{.TF}} destroy -var-file={{.TFVAR_FILE}}
         else
-          {{.TF}} -chdir=terraform destroy -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+          {{.TF}} destroy -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
         fi
     silent: true
     vars:
@@ -94,29 +87,32 @@ tasks:
     desc: "Reformat your configuration in the standard style"
     cmds:
       - |
-        {{.TF}} -chdir=terraform fmt -recursive .
+        {{.TF}} fmt -recursive .
 
   ssh:
     desc: "Generate SSH key and connect to specified node (vpn or dns)"
     vars:
-      module: '{{.module | default ""}}'
+      node: '{{.node | default ""}}'
       connect: "{{.connect | default false}}"
-      ssh_key: "{{.SSH_DIR}}/{{.module}}.rsa"
+      ssh_key: "{{.SSH_DIR}}/{{.node}}.rsa"
     preconditions:
-      - sh: '[ "{{.module}}" = "vpn" ] || [ "{{.module}}" = "dns" ]'
-        msg: "invalid module '{{.module}}'; allowed values: 'vpn' or 'dns'"
-      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.{{.module}}"'
-        msg: "terraform module not found, apply configuration first"
+      - sh: '[ "{{.node}}" = "vpn" ] || [ "{{.node}}" = "dns" ]'
+        msg: "invalid node '{{.node}}'; allowed values: 'vpn' or 'dns'"
+      - sh: '{{.TF}} state list | grep -q "module.{{.node}}"'
+        msg: "terraform state for node not found, apply configuration first"
+    requires:
+      vars:
+        - node
     cmds:
       - |
         mkdir -p "{{.SSH_DIR}}"
-        CREDENTIALS_KEY="{{.module}}_node_credentials"
-        NODE_IP_KEY="{{.module}}_node_ip"
-        {{.TF}} -chdir=terraform output -json "$CREDENTIALS_KEY" | jq -r .ssh_private_key > "{{.ssh_key}}"
+        CREDENTIALS_KEY="{{.node}}_node_credentials"
+        NODE_IP_KEY="{{.node}}_node_ip"
+        {{.TF}} output -json "$CREDENTIALS_KEY" | jq -r .ssh_private_key > "{{.ssh_key}}"
         chmod 0600 "{{.ssh_key}}"
         if [ "{{.connect}}" == "true" ]; then
-          USERNAME=$({{.TF}} -chdir=terraform output -json "$CREDENTIALS_KEY" | jq -r .username)
-          IP_ADDR=$({{.TF}} -chdir=terraform output -json "$NODE_IP_KEY" | jq -r .)
+          USERNAME=$({{.TF}} output -json "$CREDENTIALS_KEY" | jq -r .username)
+          IP_ADDR=$({{.TF}} output -json "$NODE_IP_KEY" | jq -r .)
           ssh-keygen -R "$IP_ADDR"
           ssh -i "{{.ssh_key}}" "$USERNAME@$IP_ADDR"
         fi
@@ -130,12 +126,12 @@ tasks:
       output_file: "{{.OUTPUT_DIR}}/kube/config"
       symlink: "{{.symlink | default false}}"
     preconditions:
-      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.talos"'
+      - sh: '{{.TF}} state list | grep -q "module.talos"'
         msg: "talos cluster is not deployed, apply configuration first"
     cmds:
       - |
-        mkdir -p "$(dirname "{{.OUTPUT_FILE}}")"
-        {{.TF}} -chdir=terraform output -json | jq -r .talos_kubeconfig.value > {{.output_file}}
+        mkdir -p "$(dirname "{{.output_file}}")"
+        {{.TF}} output -json | jq -r .talos_kubeconfig.value > {{.output_file}}
         if [ "{{.symlink}}" == "true" ]; then
           if [ ! -f "$HOME/.kube/config" ]; then
             mkdir -p "$HOME/.kube"
@@ -154,7 +150,7 @@ tasks:
     vars:
       output_file: "{{.OUTPUT_DIR}}/kubeseal/{{.NAME}}.cert"
     preconditions:
-      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.talos"'
+      - sh: '{{.TF}} state list | grep -q "module.talos"'
         msg: "talos cluster is not deployed, apply configuration first"
     cmds:
       - |
@@ -170,12 +166,12 @@ tasks:
       output_file: "{{.OUTPUT_DIR}}/talos/config"
       symlink: "{{.symlink | default false}}"
     preconditions:
-      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.talos"'
+      - sh: '{{.TF}} state list | grep -q "module.talos"'
         msg: "talos cluster is not deployed, apply configuration first"
     cmds:
       - |
         mkdir -p "$(dirname "{{.output_file}}")"
-        {{.TF}} -chdir=terraform output -json | jq -r .talos_config.value > {{.output_file}}
+        {{.TF}} output -json | jq -r .talos_config.value > {{.output_file}}
         if [ "{{.symlink}}" == "true" ]; then
           if [ ! -f "$HOME/.talos/config" ]; then
             mkdir -p "$HOME/.talos"
@@ -195,12 +191,12 @@ tasks:
       output_file: "{{.OUTPUT_DIR}}/wireguard/{{.NAME}}.conf"
       symlink: "{{.symlink | default false}}"
     preconditions:
-      - sh: '{{.TF}} -chdir=terraform state list | grep -q "module.vpn"'
+      - sh: '{{.TF}} state list | grep -q "module.vpn"'
         msg: "vpn instance is not deployed yet, apply configuration first"
     cmds:
       - |
         mkdir -p "$(dirname "{{.output_file}}")"
-        {{.TF}} -chdir=terraform output --json wireguard_client_configuration | jq -r > {{.output_file}}
+        {{.TF}} output --json wireguard_client_configuration | jq -r > {{.output_file}}
     silent: true
     generates:
       - "{{.output_file}}"

@@ -1,0 +1,122 @@
+version: "3"
+
+vars:
+  TF_BACKEND_S3_KEY: "apps/{{.ENV}}.tfstate"
+  TF_BACKEND_ARGS: -backend-config="encrypt={{.TF_BACKEND_ENCRYPT}}" -backend-config="bucket={{.TF_BACKEND_S3_BUCKET}}" -backend-config="key={{.TF_BACKEND_S3_KEY}}" -backend-config="region={{.TF_BACKEND_S3_REGION}}"
+  TFVAR_FILE: "{{.ENV}}.tfvars"
+
+tasks:
+  init:
+    desc: "Prepare your working directory for other commands"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} init {{.TF_BACKEND_ARGS}}
+        else
+          {{.TF}} -chdir=./modules/{{.module}} init
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  validate:
+    desc: "Check whether the configuration is valid"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} validate
+        else
+          {{.TF}} validate -target=module.{{.module}}
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  plan:
+    desc: "Show changes required by the current configuration"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} plan -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} plan -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  apply:
+    desc: "Create or update infrastructure"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} apply -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} apply -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  destroy:
+    desc: "Create or update infrastructure"
+    cmds:
+      - |
+        if [ -z "{{.module}}" ]; then
+          {{.TF}} destroy -var-file={{.TFVAR_FILE}}
+        else
+          {{.TF}} destroy -target=module.{{.module}} -var-file={{.TFVAR_FILE}}
+        fi
+    silent: true
+    vars:
+      module: '{{.module | default ""}}'
+
+  format:
+    desc: "Reformat your configuration in the standard style"
+    cmds:
+      - |
+        {{.TF}} fmt -recursive .
+
+  secrets:
+    desc: "Show bootstrap/admin credentials for a specified app"
+    preconditions:
+      - sh: '[ "{{.app}}" = "authentik" ] || [ "{{.app}}" = "gitea" ] || [ "{{.app}}" = "minio" ] || [ "{{.app}}" = "harbor" || [ "{{.app}}" = "grafana" ]'
+        msg: "invalid app '{{.app}}'. Valid options are: authentik, gitea, minio, harbor."
+    cmds:
+      - |
+        case "{{.app}}" in
+          authentik)
+            echo "Password: $({{.TF}} output -json | jq -r '.authentik_bootstrap_password.value')"
+            ;;
+          gitea)
+            echo "Username: $({{.TF}} output -json | jq -r '.gitea_admin_credentials.value.username')"
+            echo "Password: $({{.TF}} output -json | jq -r '.gitea_admin_credentials.value.password')"
+            ;;
+          minio)
+            echo "Username: $({{.TF}} output -json | jq -r '.minio_admin_credentials.value.username')"
+            echo "Password: $({{.TF}} output -json | jq -r '.minio_admin_credentials.value.password')"
+            ;;
+          harbor)
+            echo "Password: $({{.TF}} output -json | jq -r '.harbor_admin_password.value')"
+            ;;
+          grafana)
+            echo "Username: $({{.TF}} output -json | jq -r '.grafana_admin_credentials.value.username')"
+            echo "Password: $({{.TF}} output -json | jq -r '.grafana_admin_credentials.value.password')"
+            ;;
+        esac
+    silent: true
+    vars:
+      app: '{{.app | default ""}}'
+
+  scale-runners:
+    desc: "Scale Gitea action runners to the specified count (0-10)"
+    preconditions:
+      - sh: '[ "{{.count}}" -ge 0 ] && [ "{{.count}}" -le 10 ]'
+        msg: "Count must be an integer between 0 and 10."
+      - sh: "kubectl get statefulset gitea-act-runner -n gitea &> /dev/null"
+        msg: "StatefulSet 'gitea-act-runner' does not exist in the 'gitea' namespace."
+    cmds:
+      - |
+        kubectl scale statefulset gitea-act-runner --replicas={{.count}} -n gitea
+    vars:
+      count: '{{.count | default ""}}'

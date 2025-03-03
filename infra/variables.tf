@@ -52,12 +52,12 @@ variable "cluster_ip_range" {
 
   validation {
     condition     = can(cidrhost(var.cluster_ip_range, 1))
-    error_message = "The cluster_ip_range must be a valid CIDR range."
+    error_message = "cluster_ip_range must be a valid CIDR range"
   }
 
   validation {
     condition     = can(cidrhost(var.cluster_ip_range, var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 4))
-    error_message = "'cluster_ip_range' does not have enough usable IPs for the configuration. Adjust the CIDR range or reduce the number of nodes."
+    error_message = "'cluster_ip_range' does not have enough usable IPs for the configuration"
   }
 }
 
@@ -94,7 +94,7 @@ variable "k8s_version" {
   default     = "1.32"
   validation {
     condition     = can(regex("^\\d+(\\.\\d+)+", var.k8s_version))
-    error_message = "Must be a version number."
+    error_message = "must be a version number"
   }
 }
 
@@ -137,7 +137,7 @@ variable "talos_vm_config" {
 variable "ubuntu_version" {
   description = "Version of Ubuntu to deploy for VPN VM"
   type        = string
-  default     = "noble"
+  default     = "24.10"
 }
 
 variable "vpn_vm_config" {

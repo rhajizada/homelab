@@ -1,0 +1,71 @@
+gitea:
+  oauth:
+  - name: "${oauth_name}"
+    provider: "openidConnect"
+    existingSecret: gitea-authentik-secret
+    autoDiscoverUrl: "${oauth_discovery_url}"
+    iconUrl: "https://goauthentik.io/img/icon.png"
+    scopes: "${oauth_scopes}"
+    groupClaimName: "${oauth_group_claim_name}"
+    adminGroup: admin
+    restrictedGroup: restricted
+  admin:
+    existingSecret: gitea-admin-secret
+  config:
+    server:
+      DISABLE_SSH: true
+      DOMAIN: ${host}
+    service:
+      SHOW_REGISTRATION_BUTTON: false
+      ALLOW_ONLY_EXTERNAL_REGISTRATION: true
+      REQUIRE_SIGNIN_VIEW: true
+      ENABLE_PASSWORD_SIGNIN_FORM: false
+      ENABLE_BASIC_AUTHENTICATION: false
+    oauth2:
+      ENABLED: false
+    oauth2_client:
+      ENABLE_AUTO_REGISTRATION: true
+      ACCOUNT_LINKING: auto
+    admin:
+      DISABLE_REGULAR_ORG_CREATION: true
+    packages:
+      ENABLED: true
+    mirror:
+      ENABLED: true
+  metrics:
+    enabled: true
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: "${cert_issuer}"
+  hosts:
+    - host: ${host}
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+  - secretName: gitea-tls
+    hosts:
+    - "${host}"
+
+persistence:
+  enabled: true
+  create: true
+  mount: true
+  claimName: gitea-shared-storage
+  size: ${storage_size}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+
+actions:
+  enabled: true
+  statefulset:
+    dind:
+      securityContext:
+        privileged: true
+  provisioning:
+    enabled: true

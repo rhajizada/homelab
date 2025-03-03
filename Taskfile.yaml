@@ -4,11 +4,19 @@ dotenv: [".env"]
 
 vars:
   NAME: homelab
-  ENV: dev
+  ENV: prod
   TF: terraform # tofu
+  TF_BACKEND_ENCRYPT: true
+  TF_BACKEND_S3_BUCKET: "tf-solocuplabs-{{.NAME}}-state"
+  TF_BACKEND_S3_REGION: "us-east-1"
   OUTPUT_DIR: "{{.USER_WORKING_DIR}}/output"
   SSH_DIR: "{{.OUTPUT_DIR}}/ssh"
 
 includes:
-  tf:
-    taskfile: ./terraform/Taskfile.yaml
+  infra:
+    taskfile: ./infra/Taskfile.yaml
+    dir: ./infra
+
+  apps:
+    taskfile: ./apps/Taskfile.yaml
+    dir: ./apps

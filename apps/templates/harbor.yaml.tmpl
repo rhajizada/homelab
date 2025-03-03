@@ -1,0 +1,51 @@
+expose:
+  type: ingress
+  tls:
+    enabled: true
+    certSource: auto
+    secret:
+      secretName: harbor-tls
+  ingress:
+    hosts:
+      core: ${host}
+    className: traefik
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      cert-manager.io/cluster-issuer: '${cert_issuer}'
+
+core:
+  extraEnvVars:
+    - name: CONFIG_OVERWRITE_JSON
+      valueFrom:
+        secretKeyRef:
+          name: harbor-oidc-config
+          key: config_overwrite_json
+
+externalURL: 'https://${host}'
+
+persistence:
+  enabled: true
+  persistentVolumeClaim:
+    registry:
+      accessMode: ReadWriteMany
+      size: '${storage_size}'
+    jobservice:
+      jobLog:
+        accessMode: ReadWriteMany
+  imageChartStorage:
+    disableredirect: false
+    type: filesystem
+
+existingSecretAdminPassword: harbor-admin-secret
+existingSecretAdminPasswordKey: password
+
+logLevel: debug
+
+existingSecretSecretKey: harbor-secret
+
+cache:
+  enabled: true
+  expireHours: 24
+
+metrics:
+  enabled: true

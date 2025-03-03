@@ -1,0 +1,45 @@
+authentik:
+  postgresql:
+    password: ${postgresql_password}
+
+redis:
+  enabled: true
+
+postgresql:
+  enabled: true
+  auth:
+    password: ${postgresql_password}
+
+global:
+  env:
+    - name: AUTHENTIK_BOOTSTRAP_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: bootstrap-password
+    - name: AUTHENTIK_BOOTSTRAP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: bootstrap-token
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: secret-key
+
+server:
+  metrics:
+    enabled: true
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      cert-manager.io/cluster-issuer: ${cert_issuer}
+    hosts:
+      - ${host}
+    tls:
+      - secretName: authentik-tls
+        hosts:
+          - ${host}
