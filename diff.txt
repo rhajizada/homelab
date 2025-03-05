@@ -1,0 +1,1448 @@
+diff --git a/apps/authentik.tf b/apps/authentik.tf
+index 2fdb69b..7bcae3a 100644
+--- a/apps/authentik.tf
++++ b/apps/authentik.tf
+@@ -276,6 +276,18 @@ resource "authentik_group" "harbor_groups" {
+   name     = each.value
+ }
+ 
++resource "authentik_property_mapping_provider_scope" "preferred_username" {
++  depends_on = [helm_release.authentik]
++  name       = "authentik preferred_username OAuth Mapping: OpenID 'preferred_username'"
++  expression = <<EOF
++    return { "preferred_username": request.user.attributes.get("username", "") }
++EOF
++  scope_name = "preferred_username"
++  lifecycle {
++    ignore_changes = [expression]
++  }
++}
++
+ resource "authentik_provider_oauth2" "harbor" {
+   depends_on = [
+     helm_release.authentik
+@@ -296,6 +308,7 @@ resource "authentik_provider_oauth2" "harbor" {
+     data.authentik_property_mapping_provider_scope.email.id,
+     data.authentik_property_mapping_provider_scope.profile.id,
+     data.authentik_property_mapping_provider_scope.openid.id,
++    authentik_property_mapping_provider_scope.preferred_username.id
+   ]
+   signing_key = data.authentik_certificate_key_pair.generated.id
+ }
+@@ -398,3 +411,64 @@ resource "authentik_application" "argocd" {
+   protocol_provider = authentik_provider_oauth2.argocd.id
+   meta_icon         = "https://simpleicons.org/icons/argo.svg"
+ }
++
++resource "random_password" "openwebui_client_id" {
++  length  = 32
++  special = false
++}
++
++resource "random_password" "openwebui_client_secret" {
++  length  = 64
++  special = true
++}
++
++resource "authentik_rbac_role" "openwebui_admin_role" {
++  name = "openwebui-admin"
++}
++
++resource "authentik_rbac_role" "openwebui_user_role" {
++  name = "openwebui-user"
++}
++
++resource "authentik_group" "openwebui_admin_group" {
++  depends_on = [authentik_rbac_role.openwebui_admin_role]
++  name       = "openwebui-admins"
++  roles      = [authentik_rbac_role.openwebui_admin_role.id]
++}
++
++resource "authentik_group" "openwebui_user_group" {
++  depends_on = [authentik_rbac_role.openwebui_user_role]
++  name       = "openwebui-users"
++  roles      = [authentik_rbac_role.openwebui_user_role.id]
++}
++
++resource "authentik_provider_oauth2" "openwebui" {
++  depends_on = [
++    helm_release.authentik
++  ]
++  name               = "openwebui"
++  client_type        = "confidential"
++  client_id          = random_password.openwebui_client_id.result
++  client_secret      = random_password.openwebui_client_secret.result
++  authorization_flow = data.authentik_flow.default_authorization_flow.id
++  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
++  allowed_redirect_uris = [
++    {
++      matching_mode = "strict",
++      url           = "https://${local.openwebui.host}/oauth/oidc/callback",
++    }
++  ]
++  property_mappings = [
++    data.authentik_property_mapping_provider_scope.email.id,
++    data.authentik_property_mapping_provider_scope.profile.id,
++    data.authentik_property_mapping_provider_scope.openid.id,
++  ]
++  signing_key = data.authentik_certificate_key_pair.generated.id
++}
++
++resource "authentik_application" "openwebui" {
++  name              = "Open WebUI"
++  slug              = "openwebui-slug"
++  protocol_provider = authentik_provider_oauth2.openwebui.id
++  meta_icon         = "https://simpleicons.org/icons/langchain.svg"
++}
+diff --git a/apps/dcgm-exporter.tf b/apps/dcgm-exporter.tf
+new file mode 100644
+index 0000000..e16fdef
+--- /dev/null
++++ b/apps/dcgm-exporter.tf
+@@ -0,0 +1,35 @@
++locals {
++  dcgm = {
++    repository = "https://nvidia.github.io/dcgm-exporter/helm-charts"
++    chart      = "dcgm-exporter"
++    version    = "4.1.0"
++    namespace  = "dcgm"
++  }
++}
++
++resource "kubernetes_namespace" "dcgm_namespace" {
++  metadata {
++    name = local.dcgm.namespace
++    labels = {
++      "pod-security.kubernetes.io/enforce" = "privileged"
++    }
++  }
++}
++
++resource "helm_release" "dcgm" {
++  depends_on = [
++    kubernetes_namespace.dcgm_namespace,
++  ]
++
++  name       = "dcgm"
++  chart      = local.dcgm.chart
++  repository = local.dcgm.repository
++  version    = local.dcgm.version
++  namespace  = local.dcgm.namespace
++
++  timeout = 600
++
++  values = [
++    file("${path.module}/templates/dcgm-exporter.yaml.tmpl")
++  ]
++}
+diff --git a/apps/harbor.tf b/apps/harbor.tf
+index e2ae522..3e5f724 100644
+--- a/apps/harbor.tf
++++ b/apps/harbor.tf
+@@ -59,7 +59,7 @@ resource "kubernetes_secret" "harbor_oidc_config" {
+   }
+ 
+   data = {
+-    config_overwrite_json = "{\"auth_mode\": \"oidc_auth\", \"oidc_name\": \"authentik\", \"oidc_endpoint\": \"https://${local.authentik.host}/application/o/harbor-slug/\", \"oidc_client_id\": \"${random_password.harbor_client_id.result}\", \"oidc_client_secret\": \"${random_password.harbor_client_secret.result}\", \"oidc_groups_claim\": \"groups\", \"oidc_admin_group\": \"harbor-admins\", \"oidc_scope\": \"openid,profile,email\", \"oidc_verify_cert\": \"true\", \"oidc_auto_onboard\": \"true\", \"oidc_user_claim\": \"preferred_username\"}"
++    config_overwrite_json = "{\"auth_mode\": \"oidc_auth\", \"oidc_name\": \"authentik\", \"oidc_endpoint\": \"https://${local.authentik.host}/application/o/harbor-slug/\", \"oidc_client_id\": \"${random_password.harbor_client_id.result}\", \"oidc_client_secret\": \"${random_password.harbor_client_secret.result}\", \"oidc_groups_claim\": \"groups\", \"oidc_admin_group\": \"harbor-admins\", \"oidc_scope\": \"openid,profile,email,preferred_username\", \"oidc_verify_cert\": \"true\", \"oidc_auto_onboard\": \"true\", \"oidc_user_claim\": \"preferred_username\"}"
+   }
+ 
+   type = "Opaque"
+diff --git a/apps/minio.tf b/apps/minio.tf
+index 716e1b0..5d61fc9 100644
+--- a/apps/minio.tf
++++ b/apps/minio.tf
+@@ -8,7 +8,7 @@ locals {
+     admin = {
+       username = "admin"
+     }
+-    storage_size = "120Gi"
++    storage_size = "256Gi"
+   }
+ }
+ 
+diff --git a/apps/openwebui.tf b/apps/openwebui.tf
+new file mode 100644
+index 0000000..2fee110
+--- /dev/null
++++ b/apps/openwebui.tf
+@@ -0,0 +1,212 @@
++locals {
++  openwebui = {
++    repository = "https://helm.openwebui.com"
++    chart      = "open-webui"
++    version    = "6.1.0"
++    namespace  = "openwebui"
++
++    host         = "chat.${var.base_domain}"
++    storage_size = "16Gi"
++    ollama = {
++      volume_name  = "openwebui-ollama-pv"
++      storage_size = "128Gi"
++      models = [
++        "deepseek-r1:14b",
++        "gemma3:12b",
++        "llama3.1:8b",
++        "mistral",
++        "phi4:14b",
++        "qwen2.5-coder:14b",
++      ]
++    }
++  }
++  chromadb = {
++    repository   = "https://infracloudio.github.io/charts"
++    chart        = "chromadb"
++    version      = "0.1.4"
++    storage_size = "16Gi"
++  }
++  tika = {
++    repository = "https://apache.jfrog.io/artifactory/tika"
++    chart      = "tika"
++    version    = "2.9.0"
++  }
++  playwright = {
++    version = "1.51.1"
++  }
++}
++
++resource "kubernetes_namespace" "openwebui_namespace" {
++  metadata {
++    name = local.openwebui.namespace
++  }
++}
++
++resource "random_password" "openwebui_secret_key" {
++  length  = 32
++  special = false
++}
++
++resource "random_password" "openwebui_pipelines_key" {
++  length  = 32
++  special = false
++}
++
++resource "kubernetes_secret" "openwebui_secret" {
++  metadata {
++    name      = "openwebui-secret"
++    namespace = local.openwebui.namespace
++  }
++
++  data = {
++    secret = random_password.openwebui_secret_key.result
++  }
++
++  type = "Opaque"
++}
++
++resource "kubernetes_secret" "openwebui_pipelines_secret" {
++  metadata {
++    name      = "openwebui-pipelines-secret"
++    namespace = local.openwebui.namespace
++  }
++
++  data = {
++    key = random_password.openwebui_pipelines_key.result
++  }
++
++  type = "Opaque"
++}
++
++resource "kubernetes_secret" "openwebui_authentik_secret" {
++  metadata {
++    name      = "openwebui-authentik-secret"
++    namespace = local.openwebui.namespace
++  }
++
++  data = {
++    client_id     = random_password.openwebui_client_id.result
++    client_secret = random_password.openwebui_client_secret.result
++  }
++
++  type = "Opaque"
++}
++
++resource "helm_release" "chromadb" {
++  depends_on = [
++    kubernetes_namespace.openwebui_namespace,
++  ]
++
++  name       = "open-webui-chromadb"
++  chart      = local.chromadb.chart
++  repository = local.chromadb.repository
++  version    = local.chromadb.version
++  namespace  = local.openwebui.namespace
++
++  timeout = 600
++
++  values = [
++    templatefile("${path.module}/templates/chromadb.yaml.tmpl", {
++      storage_size = local.chromadb.storage_size
++    })
++  ]
++}
++
++resource "helm_release" "tika" {
++  depends_on = [
++    kubernetes_namespace.openwebui_namespace,
++  ]
++
++  name       = "open-webui-tika"
++  chart      = local.tika.chart
++  repository = local.tika.repository
++  version    = local.tika.version
++  namespace  = local.openwebui.namespace
++
++  timeout = 600
++
++  values = [
++    file("${path.module}/templates/tika.yaml")
++  ]
++}
++
++resource "helm_release" "openwebui" {
++  depends_on = [
++    kubernetes_namespace.openwebui_namespace,
++    authentik_application.openwebui,
++    kubernetes_secret.openwebui_secret,
++    kubernetes_secret.openwebui_authentik_secret,
++    kubernetes_secret.openwebui_pipelines_secret,
++    helm_release.chromadb,
++    helm_release.tika
++  ]
++
++  name       = "openwebui"
++  chart      = local.openwebui.chart
++  repository = local.openwebui.repository
++  version    = local.openwebui.version
++  namespace  = local.openwebui.namespace
++
++  timeout = 1200
++
++  values = [
++    templatefile("${path.module}/templates/openwebui.yaml.tmpl", {
++      host                 = local.openwebui.host
++      cert_issuer          = var.cluster_cert_issuer
++      storage_size         = local.openwebui.storage_size
++      ollama_size          = local.openwebui.ollama.storage_size
++      openid_provider_url  = "https://${local.authentik.host}/application/o/openwebui-slug/.well-known/openid-configuration"
++      openid_provider_name = "authentik"
++      openid_redirect_uri  = "https://${local.openwebui.host}/oauth/oidc/callback"
++    })
++  ]
++}
++
++
++resource "kubernetes_job" "ollama_init" {
++  depends_on = [
++    helm_release.openwebui
++  ]
++
++  for_each = { for model in local.openwebui.ollama.models : model => model }
++
++  metadata {
++    name      = "open-webui-ollama-init-${replace(replace(each.value, ".", "-"), ":", "-")}"
++    namespace = local.openwebui.namespace
++  }
++
++  spec {
++    # run exactly once, no retries
++    completions   = 1
++    parallelism   = 1
++    backoff_limit = 0
++
++    template {
++      metadata {
++        labels = {
++          job = "open-webui-ollama-init-${replace(replace(each.value, ".", "-"), ":", "-")}"
++        }
++      }
++
++      spec {
++
++        container {
++          name  = "ollama-init"
++          image = "alpine/curl"
++          command = [
++            "sh",
++            "-c",
++            "curl -s http://open-webui-ollama.openwebui.svc.cluster.local:11434/api/pull -d '{\"model\": \"${each.value}\"}'"
++          ]
++        }
++      }
++    }
++  }
++
++  timeouts {
++    create = "1h"
++    delete = "1h"
++  }
++}
++
++
+diff --git a/apps/templates/chromadb.yaml.tmpl b/apps/templates/chromadb.yaml.tmpl
+new file mode 100644
+index 0000000..a5b63d1
+--- /dev/null
++++ b/apps/templates/chromadb.yaml.tmpl
+@@ -0,0 +1,26 @@
++replicaCount: 1
++kind: Deployment
++
++env:
++  - name: ANONYMIZED_TELEMETRY
++    value: "False"
++  - name: ALLOW_RESET
++    value: "True"
++  - name: IS_PERSISTENT
++    value: "True"
++
++serviceAccount:
++  create: true
++  automount: true
++
++service:
++  type: ClusterIP
++  port: 8000
++
++pvc:
++  enabled: true
++  persistentVolumeClaim:
++    accessModes:
++      - ReadWriteMany
++    name: "chroma-db-data"
++    size: "${storage_size}"
+diff --git a/apps/templates/dcgm-exporter.yaml.tmpl b/apps/templates/dcgm-exporter.yaml.tmpl
+new file mode 100644
+index 0000000..005923d
+--- /dev/null
++++ b/apps/templates/dcgm-exporter.yaml.tmpl
+@@ -0,0 +1,22 @@
++arguments:
++  - "-f"
++  - "/etc/dcgm-exporter/default-counters.csv"
++
++nodeSelector:
++  nvidia.com/gpu.present: "true"
++
++tolerations:
++  - operator: Exists
++
++podAnnotations:
++  prometheus.io/scrape: "true"
++  prometheus.io/port: "9400"
++
++service:
++  enable: true
++  type: ClusterIP
++  port: 9400
++  address: ":9400"
++
++serviceMonitor:
++  enabled: false
+diff --git a/apps/templates/harbor.yaml.tmpl b/apps/templates/harbor.yaml.tmpl
+index 39470a5..9d516df 100644
+--- a/apps/templates/harbor.yaml.tmpl
++++ b/apps/templates/harbor.yaml.tmpl
+@@ -21,6 +21,9 @@ core:
+           name: harbor-oidc-config
+           key: config_overwrite_json
+ 
++notary:
++  enabled: false
++
+ externalURL: 'https://${host}'
+ 
+ persistence:
+diff --git a/apps/templates/openwebui.yaml.tmpl b/apps/templates/openwebui.yaml.tmpl
+new file mode 100644
+index 0000000..1db022f
+--- /dev/null
++++ b/apps/templates/openwebui.yaml.tmpl
+@@ -0,0 +1,128 @@
++ollama:
++  enabled: true
++  fullnameOverride: open-webui-ollama
++  ollama:
++    gpu:
++      enabled: true
++      type: nvidia
++      number: 1
++    models:
++      pull:
++        - nomic-embed-text
++  runtimeClassName: nvidia
++  persistentVolume:
++    enabled: true
++    accessModes:
++      - ReadWriteMany
++    storageClass: longhorn
++    size: ${ollama_size}
++
++nodeSelector:
++  nvidia.com/gpu.present: "true"
++
++extraEnvVars:
++  - name: ENV
++    value: "dev"
++  - name: ENABLE_OPENAI_API
++    value: "true"
++  - name: OPENAI_API_BASE_URL
++    value: "http://open-webui-pipelines.openwebui.svc.cluster.local:9099"
++  - name: OPENAI_API_KEY
++    valueFrom:
++      secretKeyRef:
++        name: openwebui-pipelines-secret
++        key: key
++  - name: SHOW_ADMIN_DETAILS
++    value: "false"
++  - name: ENABLE_LOGIN_FORM
++    value: "false"
++  - name: ENABLE_OAUTH_SIGNUP
++    value: "true"
++  - name: ENABLE_OAUTH_ROLE_MANAGEMENT
++    value: "true"
++  - name: OAUTH_ALLOWED_ROLES
++    value: "openwebui-user,openwebui-admin"
++  - name: OAUTH_ADMIN_ROLES
++    value: "openwebui-admin"
++  - name: OAUTH_CLIENT_ID
++    valueFrom:
++      secretKeyRef:
++        name: openwebui-authentik-secret
++        key: client_id
++  - name: OAUTH_CLIENT_SECRET
++    valueFrom:
++      secretKeyRef:
++        name: openwebui-authentik-secret
++        key: client_secret
++  - name: OPENID_PROVIDER_URL
++    value: "${openid_provider_url}"
++  - name: OAUTH_PROVIDER_NAME
++    value: "${openid_provider_name}"
++  - name: OPENID_REDIRECT_URI
++    value: "${openid_redirect_uri}"
++  - name: TIKA_SERVER_URL
++    value: "http://open-webui-tika.openwebui.svc.cluster.local:9998"
++  - name: ENABLE_RAG_WEB_SEARCH
++    value: "true"
++  - name: ENABLE_SEARCH_QUERY_GENERATION
++    value: "true"
++  - name: RAG_WEB_SEARCH_RESULT_COUNT
++    value: "3"
++  - name: RAG_WEB_SEARCH_ENGINE
++    value: "duckduckgo"
++  - name: RAG_WEB_LOADER_ENGINE
++    value: "playwright"
++  - name: RAG_OLLAMA_BASE_URL
++    value: "http://open-webui-ollama.openwebui.svc.cluster.local:11434"
++  - name: RAG_EMBEDDING_ENGINE
++    value: "ollama"
++  - name: RAG_EMBEDDING_MODEL
++    value: "nomic-embed-text"
++  - name: REDIS_URL
++    value: "redis://open-webui-redis-master.openwebui.svc.cluster.local:6379/0"
++  - name: CONTENT_EXTRACTION_ENGINE
++    value: "tika"
++  - name: CHROMA_HTTP_HOST
++    value: "open-webui-chromadb.openwebui.svc.cluster.local"
++  - name: WEBUI_SECRET_KEY
++    valueFrom:
++      secretKeyRef:
++        name: openwebui-secret
++        key: secret
++
++runtimeClassName: nvidia
++
++websocket:
++  enabled: true
++  url: redis://open-webui-redis-master.openwebui.svc.cluster.local:6379/1
++  redis:
++    enabled: false
++
++redis-cluster:
++  enabled: true
++  replica:
++    replicaCount: 2
++
++pipelines:
++  enabled: true
++  extraEnvVars:
++    - name: PIPELINES_API_KEY
++      valueFrom:
++        secretKeyRef:
++          name: openwebui-pipelines-secret
++          key: key
++
++ingress:
++  enabled: true
++  class: traefik
++  annotations:
++    traefik.ingress.kubernetes.io/router.entrypoints: websecure
++    cert-manager.io/cluster-issuer: ${cert_issuer}
++  host: ${host}
++  tls: true
++  existingSecret: openwebui-tls
++
++persistence:
++  enabled: true
++  size: ${storage_size}
++
+diff --git a/apps/templates/prometheus.yaml.tmpl b/apps/templates/prometheus.yaml.tmpl
+index 89a6c3b..8f36e66 100644
+--- a/apps/templates/prometheus.yaml.tmpl
++++ b/apps/templates/prometheus.yaml.tmpl
+@@ -1,18 +1,15 @@
+-ingress:
+-  enabled: false
+-
+-service:
+-  type: ClusterIP
+-
+ server:
+   extraFlags:
+     - web.enable-lifecycle
+   retention: "15d"
+-
+-persistentVolume:
+-  enabled: true
+-  size: ${storage_size}
+-  accessMode: ReadWriteMany
++  ingress:
++    enabled: false
++  service:
++    type: ClusterIP
++  persistentVolume:
++    enabled: true
++    size: ${storage_size}
++    accessMode: ReadWriteMany
+ 
+ alertmanager:
+   enabled: true
+@@ -25,9 +22,6 @@ kube-state-metrics:
+ 
+ prometheus-node-exporter:
+   enabled: true
+-
+-
+-prometheus-node-exporter:
+   rbac:
+     pspEnabled: false
+   podAnnotations:
+@@ -35,3 +29,35 @@ prometheus-node-exporter:
+ 
+ prometheus-pushgateway:
+   enabled: true
++
++extraScrapeConfigs: |
++  - job_name: "traefik"
++    metrics_path: /metrics
++    scheme: http
++    kubernetes_sd_configs:
++      - role: endpoints
++        namespaces:
++          names:
++            - traefik
++    relabel_configs:
++      - source_labels: [__meta_kubernetes_service_label_app]
++        regex: traefik
++        action: keep
++      - source_labels: [__meta_kubernetes_endpoint_port_name]
++        regex: metrics
++        action: keep
++  - job_name: 'dcgm-exporter'
++    kubernetes_sd_configs:
++      - role: pod
++        namespaces:
++          names:
++            - dcgm
++    relabel_configs:
++      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
++        action: keep
++        regex: "true"
++      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port, __meta_kubernetes_pod_ip]
++        action: replace
++        target_label: __address__
++        regex: "(.+);(.+)"
++        replacement: "$2:$1"
+diff --git a/apps/templates/tika.yaml b/apps/templates/tika.yaml
+new file mode 100644
+index 0000000..fb4c5df
+--- /dev/null
++++ b/apps/templates/tika.yaml
+@@ -0,0 +1,12 @@
++config:
++  base_url: http://tika.openwebui.svc.cluster.local:9998/
++
++networkPolicy:
++  allowExternal: false
++  enabled: false
++
++replicaCount: 1
++
++service:
++  port: 9998
++  type: ClusterIP
+diff --git a/infra/Taskfile.yaml b/infra/Taskfile.yaml
+index f19c435..0b1ba63 100644
+--- a/infra/Taskfile.yaml
++++ b/infra/Taskfile.yaml
+@@ -189,7 +189,6 @@ tasks:
+     desc: "Generate wireguard client configuration"
+     vars:
+       output_file: "{{.OUTPUT_DIR}}/wireguard/{{.NAME}}.conf"
+-      symlink: "{{.symlink | default false}}"
+     preconditions:
+       - sh: '{{.TF}} state list | grep -q "module.vpn"'
+         msg: "vpn instance is not deployed yet, apply configuration first"
+diff --git a/infra/main.tf b/infra/main.tf
+index e0d7b13..f0a656f 100644
+--- a/infra/main.tf
++++ b/infra/main.tf
+@@ -6,6 +6,7 @@ locals {
+   k8s_lb_ip        = cidrhost(var.cluster_ip_range, 4)
+   control_node_ips = [for i in range(var.talos_vm_config.control.count) : cidrhost(var.cluster_ip_range, 5 + i)]
+   worker_node_ips  = [for i in range(var.talos_vm_config.worker.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + i)]
++  gpu_node_ip      = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 1)
+ }
+ 
+ module "vpn" {
+@@ -60,8 +61,10 @@ module "talos" {
+   k8s_lb_ip               = local.k8s_lb_ip
+   control_node_ips        = local.control_node_ips
+   worker_node_ips         = local.worker_node_ips
++  gpu_node_ip             = local.gpu_node_ip
+   talos_version           = var.talos_version
+   vm_config               = var.talos_vm_config
++  gpu_vm_config           = var.talos_gpu_vm_config
+   aws_iam_credentials     = module.route53.talos_iam_user
+   aws_region              = module.route53.aws_region
+   aws_route53_zone_id     = module.route53.route_53_zone_id
+diff --git a/infra/modules/dns/templates/coredns/Corefile.tmpl b/infra/modules/dns/templates/coredns/Corefile.tmpl
+index 70816a6..ae7e649 100644
+--- a/infra/modules/dns/templates/coredns/Corefile.tmpl
++++ b/infra/modules/dns/templates/coredns/Corefile.tmpl
+@@ -15,6 +15,8 @@ ${base_domain}:53 {
+         match ".*"
+         answer "{{.Name}} 60 IN AAAA ::"
+     }
++
++    forward . tls://8.8.8.8 tls://8.8.4.4
+ }
+ 
+ . {
+diff --git a/infra/modules/talos/bootstrap.tf b/infra/modules/talos/bootstrap.tf
+index b7e4648..e3938c5 100644
+--- a/infra/modules/talos/bootstrap.tf
++++ b/infra/modules/talos/bootstrap.tf
+@@ -3,11 +3,7 @@ locals {
+   common_machine_config = {
+     machine = {
+       install = {
+-        extensions = [
+-          for name, version in var.extensions : {
+-            image = "ghcr.io/siderolabs/${name}:${version}"
+-          }
+-        ]
++        image = "factory.talos.dev/installer/${talos_image_factory_schematic.common.id}:${var.talos_version}"
+       }
+       features = {
+         # see https://www.talos.dev/v1.8/talos-guides/network/host-dns/
+@@ -54,7 +50,8 @@ locals {
+         "https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml",
+         "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml",
+         "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml",
+-        "https://github.com/cert-manager/cert-manager/releases/download/v${local.cert_manager.version}/cert-manager.crds.yaml"
++        "https://github.com/cert-manager/cert-manager/releases/download/v${local.cert_manager.version}/cert-manager.crds.yaml",
++        "https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v${local.nvidia_device_plugin.version}/deployments/static/nvidia-device-plugin.yml"
+       ]
+       inlineManifests = [
+         {
+@@ -102,23 +99,22 @@ locals {
+         {
+           name     = "longhorn"
+           contents = data.helm_template.longhorn.manifest
++        },
++        {
++          name = "nvidia-device-plugin"
++          contents = templatefile("${path.module}/templates/nvidia-device-plugin.yaml.tmpl", {
++            version = local.nvidia_device_plugin.version
++          })
++        },
++        {
++          name     = "nvidia"
++          contents = file("${path.module}/templates/nvidia.yaml")
+         }
+       ]
+     }
+   }
+   worker_node_machine_config = {
+     machine = {
+-      # sysctls = {
+-      #   "vm.nr_hugepages" = "1024"
+-      # }
+-      # nodeLabels = {
+-      #   "openebs.io/engine" = "mayastor"
+-      # }
+-      # disks = [
+-      #   {
+-      #     device = "/dev/sda"
+-      #   }
+-      # ]
+       kubelet = {
+         extraMounts = [
+           {
+@@ -135,6 +131,47 @@ locals {
+       }
+     }
+   }
++  gpu_node_machine_config = {
++    machine = {
++      nodeLabels = {
++        "nvidia.com/gpu.present" = true
++      }
++      install = {
++        image = "factory.talos.dev/installer/${talos_image_factory_schematic.gpu.id}:${var.talos_version}"
++      }
++      features = {
++        # see https://www.talos.dev/v1.8/talos-guides/network/host-dns/
++        hostDNS = {
++          enabled              = true
++          forwardKubeDNSToHost = true
++        }
++      }
++      kubelet = {
++        extraArgs = {
++          rotate-server-certificates = true
++        }
++      }
++      sysctls = {
++        "net.core.bpf_jit_harden" = 1
++      }
++      kernel = {
++        modules = [
++          {
++            name = "nvidia"
++          },
++          {
++            name = "nvidia_uvm"
++          },
++          {
++            name = "nvidia_drm"
++          },
++          {
++            name = "nvidia_modeset"
++          }
++        ]
++      }
++    }
++  }
+ }
+ 
+ resource "talos_machine_secrets" "cluster" {
+@@ -169,6 +206,19 @@ data "talos_machine_configuration" "worker" {
+   ]
+ }
+ 
++data "talos_machine_configuration" "gpu" {
++  cluster_name       = var.cluster_name
++  machine_type       = "worker"
++  cluster_endpoint   = local.cluster_endpoint
++  talos_version      = var.talos_version
++  kubernetes_version = var.k8s_version
++  machine_secrets    = talos_machine_secrets.cluster.machine_secrets
++  config_patches = [
++    yamlencode(local.gpu_node_machine_config),
++    yamlencode(local.worker_node_machine_config)
++  ]
++}
++
+ data "talos_client_configuration" "talos" {
+   cluster_name         = var.cluster_name
+   client_configuration = talos_machine_secrets.cluster.client_configuration
+@@ -225,11 +275,32 @@ resource "talos_machine_configuration_apply" "worker" {
+   ]
+ }
+ 
++resource "talos_machine_configuration_apply" "gpu" {
++  count                       = 1
++  client_configuration        = talos_machine_secrets.cluster.client_configuration
++  machine_configuration_input = data.talos_machine_configuration.gpu.machine_configuration
++  endpoint                    = local.gpu_node.address
++  node                        = local.gpu_node.address
++  config_patches = [
++    yamlencode({
++      machine = {
++        network = {
++          hostname = local.gpu_node.name
++        }
++      }
++    }),
++    file("${path.module}/templates/nvidia-default-runtimeclass.yaml")
++  ]
++  depends_on = [
++    proxmox_virtual_environment_vm.talos_gpu,
++  ]
++}
++
+ resource "talos_machine_bootstrap" "talos" {
+   client_configuration = talos_machine_secrets.cluster.client_configuration
+   endpoint             = local.control_nodes[0].address
+   node                 = local.control_nodes[0].address
+   depends_on = [
+-    talos_machine_configuration_apply.control,
++    talos_machine_configuration_apply.control
+   ]
+ }
+diff --git a/infra/modules/talos/image.tf b/infra/modules/talos/image.tf
+index 7edcd08..ebe60a4 100644
+--- a/infra/modules/talos/image.tf
++++ b/infra/modules/talos/image.tf
+@@ -1,37 +1,67 @@
+-data "talos_image_factory_extensions_versions" "this" {
++data "talos_image_factory_extensions_versions" "common" {
+   talos_version = var.talos_version
+   filters = {
+-    names = keys(var.extensions)
++    names = var.extensions
+   }
+ }
+ 
+-resource "talos_image_factory_schematic" "this" {
++data "talos_image_factory_extensions_versions" "gpu" {
++  talos_version = var.talos_version
++  filters = {
++    names = concat(var.extensions, var.gpu_extensions),
++  }
++}
++
++resource "talos_image_factory_schematic" "common" {
+   schematic = yamlencode(
+     {
+       customization = {
+         systemExtensions = {
+-          officialExtensions = data.talos_image_factory_extensions_versions.this.extensions_info[*].name
++          officialExtensions = data.talos_image_factory_extensions_versions.common.extensions_info[*].name
+         }
+       }
+     }
+   )
+ }
+ 
+-output "schematic_id" {
+-  value = talos_image_factory_schematic.this.id
++resource "talos_image_factory_schematic" "gpu" {
++  schematic = yamlencode(
++    {
++      customization = {
++        systemExtensions = {
++          officialExtensions = data.talos_image_factory_extensions_versions.gpu.extensions_info[*].name
++        }
++      }
++    }
++  )
++}
++
++data "talos_image_factory_urls" "common" {
++  talos_version = var.talos_version
++  schematic_id  = talos_image_factory_schematic.common.id
++  platform      = "nocloud"
+ }
+ 
+-data "talos_image_factory_urls" "this" {
++data "talos_image_factory_urls" "gpu" {
+   talos_version = var.talos_version
+-  schematic_id  = talos_image_factory_schematic.this.id
++  schematic_id  = talos_image_factory_schematic.gpu.id
+   platform      = "nocloud"
+ }
+ 
+-resource "proxmox_virtual_environment_download_file" "talos_nocloud_image" {
++resource "proxmox_virtual_environment_download_file" "talos_nocloud_common_image" {
++  content_type = "iso"
++  datastore_id = "local"
++  node_name    = var.proxmox_node_name
++
++  file_name = "talos-${var.talos_version}-nocloud-common-amd64.img"
++  url       = data.talos_image_factory_urls.common.urls.iso
++}
++
++resource "proxmox_virtual_environment_download_file" "talos_nocloud_gpu_image" {
+   content_type = "iso"
+   datastore_id = "local"
+   node_name    = var.proxmox_node_name
+ 
+-  file_name = "talos-${var.talos_version}-nocloud-amd64.img"
+-  url       = data.talos_image_factory_urls.this.urls.iso
++  file_name = "talos-${var.talos_version}-nocloud-gpu-amd64.img"
++  url       = data.talos_image_factory_urls.gpu.urls.iso
+ }
+diff --git a/infra/modules/talos/nvidia.tf b/infra/modules/talos/nvidia.tf
+new file mode 100644
+index 0000000..f4020c7
+--- /dev/null
++++ b/infra/modules/talos/nvidia.tf
+@@ -0,0 +1,5 @@
++locals {
++  nvidia_device_plugin = {
++    version = "0.17.1"
++  }
++}
+diff --git a/infra/modules/talos/outputs.tf b/infra/modules/talos/outputs.tf
+index fb2de2b..9858cee 100644
+--- a/infra/modules/talos/outputs.tf
++++ b/infra/modules/talos/outputs.tf
+@@ -18,6 +18,11 @@ output "worker_ips" {
+   value       = [for node in local.worker_nodes : node.address]
+ }
+ 
++output "gpu_node_ip" {
++  description = "IP addresses of the GPU node"
++  value       = local.gpu_node.address
++}
++
+ output "kubeconfig" {
+   description = "K8s cluster kubeconfig"
+   sensitive   = true
+diff --git a/infra/modules/talos/proxmox.tf b/infra/modules/talos/proxmox.tf
+index 5f61107..a0dc6d9 100644
+--- a/infra/modules/talos/proxmox.tf
++++ b/infra/modules/talos/proxmox.tf
+@@ -1,16 +1,20 @@
+ locals {
+   control_nodes = [
+     for i in range(var.vm_config["control"].count) : {
+-      name    = "${var.cluster_name}-${var.environment}-ctrl-${i}"
++      name    = "${var.cluster_name}-${var.environment}-ctrl-${i + 1}"
+       address = var.control_node_ips[i]
+     }
+   ]
+   worker_nodes = [
+     for i in range(var.vm_config["worker"].count) : {
+-      name    = "${var.cluster_name}-${var.environment}-worker-${i}"
++      name    = "${var.cluster_name}-${var.environment}-worker-${i + 1}"
+       address = var.worker_node_ips[i]
+     }
+   ]
++  gpu_node = {
++    name    = "${var.cluster_name}-${var.environment}-worker-gpu"
++    address = var.gpu_node_ip
++  }
+ }
+ 
+ 
+@@ -55,7 +59,7 @@ resource "proxmox_virtual_environment_vm" "talos_control_plane" {
+     discard      = var.vm_config["control"].disk.discard
+     size         = var.vm_config["control"].disk.size
+     file_format  = var.vm_config["control"].disk.file_format
+-    file_id      = proxmox_virtual_environment_download_file.talos_nocloud_image.id
++    file_id      = proxmox_virtual_environment_download_file.talos_nocloud_common_image.id
+   }
+   agent {
+     enabled = true
+@@ -112,7 +116,7 @@ resource "proxmox_virtual_environment_vm" "talos_worker" {
+     discard      = var.vm_config["worker"].disk.discard
+     size         = var.vm_config["worker"].disk.size
+     file_format  = var.vm_config["worker"].disk.file_format
+-    file_id      = proxmox_virtual_environment_download_file.talos_nocloud_image.id
++    file_id      = proxmox_virtual_environment_download_file.talos_nocloud_common_image.id
+   }
+   agent {
+     enabled = true
+@@ -128,3 +132,64 @@ resource "proxmox_virtual_environment_vm" "talos_worker" {
+   }
+ }
+ 
++resource "proxmox_virtual_environment_vm" "talos_gpu" {
++  count           = var.gpu_vm_config.enabled ? 1 : 0
++  name            = local.gpu_node.name
++  node_name       = var.proxmox_node_name
++  tags            = sort([var.cluster_name, var.environment, "talos", "worker", "gpu", "terraform"])
++  stop_on_destroy = true
++  bios            = "ovmf"
++  machine         = "q35"
++  scsi_hardware   = "virtio-scsi-single"
++  operating_system {
++    type = "l26"
++  }
++  cpu {
++    type  = "host"
++    cores = var.gpu_vm_config.cpu
++  }
++  memory {
++    dedicated = var.gpu_vm_config.memory
++  }
++  vga {
++    type = "qxl"
++  }
++  network_device {
++    bridge = var.gpu_vm_config.network
++  }
++  tpm_state {
++    version = "v2.0"
++  }
++  efi_disk {
++    datastore_id = var.gpu_vm_config.efi_disk.datastore_id
++    file_format  = var.gpu_vm_config.efi_disk.file_format
++    type         = var.gpu_vm_config.efi_disk.type
++  }
++  hostpci {
++    id     = var.gpu_vm_config.hostpci.id
++    device = var.gpu_vm_config.hostpci.device
++    pcie   = var.gpu_vm_config.hostpci.pcie
++  }
++  disk {
++    datastore_id = var.gpu_vm_config.disk.datastore_id
++    interface    = var.gpu_vm_config.disk.interface
++    iothread     = var.gpu_vm_config.disk.iothread
++    ssd          = var.gpu_vm_config.disk.ssd
++    discard      = var.gpu_vm_config.disk.discard
++    size         = var.gpu_vm_config.disk.size
++    file_format  = var.gpu_vm_config.disk.file_format
++    file_id      = proxmox_virtual_environment_download_file.talos_nocloud_gpu_image.id
++  }
++  agent {
++    enabled = true
++    trim    = true
++  }
++  initialization {
++    ip_config {
++      ipv4 {
++        address = "${local.gpu_node.address}/24"
++        gateway = var.cluster_network_gateway
++      }
++    }
++  }
++}
+diff --git a/infra/modules/talos/templates/longhorn.yaml b/infra/modules/talos/templates/longhorn.yaml
+index 8c45498..4b215cb 100644
+--- a/infra/modules/talos/templates/longhorn.yaml
++++ b/infra/modules/talos/templates/longhorn.yaml
+@@ -1,2 +1,14 @@
+ preUpgradeChecker:
+   jobEnabled: false
++metrics:
++  serviceMonitor:
++    enabled: true
++    additionalLabels:
++      release: prometheus
++    annotations:
++      prometheus.io/scrape: "true"
++      prometheus.io/port: "9500"
++    interval: "30s"
++    scrapeTimeout: "10s"
++    relabelings: []
++    metricRelabelings: []
+diff --git a/infra/modules/talos/templates/nvidia-default-runtimeclass.yaml b/infra/modules/talos/templates/nvidia-default-runtimeclass.yaml
+new file mode 100644
+index 0000000..548ede3
+--- /dev/null
++++ b/infra/modules/talos/templates/nvidia-default-runtimeclass.yaml
+@@ -0,0 +1,10 @@
++- op: add
++  path: /machine/files
++  value:
++    - content: |
++        [plugins]
++          [plugins."io.containerd.cri.v1.runtime"]
++            [plugins."io.containerd.cri.v1.runtime".containerd]
++              default_runtime_name = "nvidia"
++      path: /etc/cri/conf.d/20-customization.part
++      op: create
+diff --git a/infra/modules/talos/templates/nvidia-device-plugin.yaml.tmpl b/infra/modules/talos/templates/nvidia-device-plugin.yaml.tmpl
+new file mode 100644
+index 0000000..b4edf8e
+--- /dev/null
++++ b/infra/modules/talos/templates/nvidia-device-plugin.yaml.tmpl
+@@ -0,0 +1,36 @@
++apiVersion: apps/v1
++kind: DaemonSet
++metadata:
++  name: nvidia-device-plugin-daemonset
++  namespace: kube-system
++spec:
++  selector:
++    matchLabels:
++      name: nvidia-device-plugin-ds
++  updateStrategy:
++    type: RollingUpdate
++  template:
++    metadata:
++      labels:
++        name: nvidia-device-plugin-ds
++    spec:
++      nodeSelector:
++        nvidia.com/gpu.present: "true"
++      priorityClassName: "system-node-critical"
++      containers:
++      - image: nvcr.io/nvidia/k8s-device-plugin:v${version}
++        name: nvidia-device-plugin-ctr
++        env:
++          - name: FAIL_ON_INIT_ERROR
++            value: "false"
++        securityContext:
++          allowPrivilegeEscalation: false
++          capabilities:
++            drop: ["ALL"]
++        volumeMounts:
++        - name: device-plugin
++          mountPath: /var/lib/kubelet/device-plugins
++      volumes:
++      - name: device-plugin
++        hostPath:
++          path: /var/lib/kubelet/device-plugins
+diff --git a/infra/modules/talos/templates/nvidia-plugin.yaml b/infra/modules/talos/templates/nvidia-plugin.yaml
+new file mode 100644
+index 0000000..dacd269
+--- /dev/null
++++ b/infra/modules/talos/templates/nvidia-plugin.yaml
+@@ -0,0 +1 @@
++runtimeClassName: nvidia
+diff --git a/infra/modules/talos/templates/nvidia.yaml b/infra/modules/talos/templates/nvidia.yaml
+new file mode 100644
+index 0000000..7ba6add
+--- /dev/null
++++ b/infra/modules/talos/templates/nvidia.yaml
+@@ -0,0 +1,6 @@
++---
++apiVersion: node.k8s.io/v1
++kind: RuntimeClass
++metadata:
++  name: nvidia
++handler: nvidia
+diff --git a/infra/modules/talos/templates/traefik.yaml.tmpl b/infra/modules/talos/templates/traefik.yaml.tmpl
+index b84ce14..2d01a02 100644
+--- a/infra/modules/talos/templates/traefik.yaml.tmpl
++++ b/infra/modules/talos/templates/traefik.yaml.tmpl
+@@ -13,8 +13,32 @@ ports:
+         to: websecure
+         scheme: https
+         permanent: true
++    transport:
++      respondingTimeouts:
++        readTimeout: 0
++        writeTimeout: 0
+   websecure:
+     expose:
+       default: true
+     exposedPort: 443
++    transport:
++      respondingTimeouts:
++        readTimeout: 0
++        writeTimeout: 0
+ 
++metrics:
++  prometheus:
++    entryPoint: metrics
++    addEntryPointsLabels: true
++    addRoutersLabels: true
++    addServicesLabels: true
++    buckets: "0.1,0.3,1.2,5.0"
++    manualRouting: false
++    headerLabels: {}
++    service:
++      enabled: true
++      labels:
++        app: traefik
++      annotations:
++        prometheus.io/scrape: "true"
++        prometheus.io/port: "8082"
+diff --git a/infra/modules/talos/variables.tf b/infra/modules/talos/variables.tf
+index 52eab8d..65ef7cb 100644
+--- a/infra/modules/talos/variables.tf
++++ b/infra/modules/talos/variables.tf
+@@ -40,12 +40,22 @@ variable "environment" {
+ }
+ 
+ variable "extensions" {
+-  description = "Map of Talos extension name to a specific version"
+-  type        = map(string)
+-  default = {
+-    "iscsi-tools"      = "v0.1.6"
+-    "qemu-guest-agent" = "9.2.0"
+-  }
++  description = "Talos extensions to instal on all nodes"
++  type        = list(string)
++  default = [
++    "iscsi-tools",
++    "util-linux-tools",
++    "qemu-guest-agent"
++  ]
++}
++
++variable "gpu_extensions" {
++  description = "Talos extensions to install on GPU nodes"
++  type        = list(string)
++  default = [
++    "nvidia-container-toolkit-production",
++    "nvidia-open-gpu-kernel-modules-production"
++  ]
+ }
+ 
+ variable "talos_version" {
+@@ -84,6 +94,12 @@ variable "worker_node_ips" {
+   type        = list(any)
+ }
+ 
++variable "gpu_node_ip" {
++  description = "GPU node IP address"
++  type        = string
++}
++
++
+ variable "vm_config" {
+   description = "Configuration for worker and control node VMs"
+   type = map(object({
+@@ -146,7 +162,62 @@ variable "vm_config" {
+       }
+       memory  = 4096
+       network = "vmbr0"
+-  } }
++    }
++  }
++}
++
++variable "gpu_vm_config" {
++  description = "Configuration for GPU node VMs"
++  type = object({
++    enabled = bool
++    cpu     = number
++    disk = object({
++      datastore_id = string
++      interface    = string
++      iothread     = bool
++      ssd          = bool
++      discard      = string
++      size         = number
++      file_format  = string
++    })
++    efi_disk = object({
++      datastore_id = string
++      file_format  = string
++      type         = string
++    })
++    hostpci = object({
++      device = string
++      id     = string
++      pcie   = bool
++    })
++    memory  = number
++    network = string
++  })
++  default = {
++    enabled = false
++    cpu     = 4
++    disk = {
++      datastore_id = "local-lvm"
++      interface    = "scsi0"
++      iothread     = true
++      ssd          = true
++      discard      = "on"
++      size         = 128
++      file_format  = "raw"
++    }
++    efi_disk = {
++      datastore_id = "local-lvm"
++      file_format  = "raw"
++      type         = "4m"
++    }
++    hostpci = {
++      device = "hostpci0"
++      id     = "03:00.0"
++      pcie   = true
++    }
++    memory  = 4096
++    network = "vmbr0"
++  }
+ }
+ 
+ variable "aws_region" {
+diff --git a/infra/outputs.tf b/infra/outputs.tf
+index e2071c3..69038ca 100644
+--- a/infra/outputs.tf
++++ b/infra/outputs.tf
+@@ -18,6 +18,12 @@ output "talos_worker_ips" {
+   value       = module.talos.worker_ips
+ }
+ 
++
++output "talos_gpu_node_ip" {
++  description = "IP address of the GPU nodes"
++  value       = module.talos.gpu_node_ip
++}
++
+ output "talos_config" {
+   description = "Talos cluster client configuration"
+   sensitive   = true
+diff --git a/infra/variables.tf b/infra/variables.tf
+index 4221781..52e2c0e 100644
+--- a/infra/variables.tf
++++ b/infra/variables.tf
+@@ -85,7 +85,7 @@ variable "environment" {
+ variable "talos_version" {
+   description = "Version of Talos to deploy"
+   type        = string
+-  default     = "v1.9.2"
++  default     = "v1.9.5"
+ }
+ 
+ variable "k8s_version" {
+@@ -98,18 +98,6 @@ variable "k8s_version" {
+   }
+ }
+ 
+-#  please see https://github.com/siderolabs/extensions?tab=readme-ov-file#installing-extensions
+-variable "talos_extensions" {
+-  description = "Map of Talos extension name to a specific version"
+-  type        = map(string)
+-  default = {
+-    "intel-ucode"      = "20241112"
+-    "iscsi-tools"      = "v0.1.6"
+-    "qemu-guest-agent" = "9.2.0"
+-  }
+-}
+-
+-
+ variable "talos_vm_config" {
+   description = "Configuration for worker and control node VMs"
+   type = map(object({
+@@ -134,6 +122,35 @@ variable "talos_vm_config" {
+   }))
+ }
+ 
++variable "talos_gpu_vm_config" {
++  description = "Configuration for GPU node VMs"
++  type = object({
++    enabled = bool
++    cpu     = number
++    disk = object({
++      datastore_id = string
++      interface    = string
++      iothread     = bool
++      ssd          = bool
++      discard      = string
++      size         = number
++      file_format  = string
++    })
++    efi_disk = object({
++      datastore_id = string
++      file_format  = string
++      type         = string
++    })
++    hostpci = object({
++      device = string
++      id     = string
++      pcie   = bool
++    })
++    memory  = number
++    network = string
++  })
++}
++
+ variable "ubuntu_version" {
+   description = "Version of Ubuntu to deploy for VPN VM"
+   type        = string
+@@ -223,3 +240,4 @@ variable "dns_vm_config" {
+     network = "vmbr0"
+   }
+ }
++
