@@ -11,6 +11,7 @@ locals {
       minio   = ["minio-users", "minio-admins"],
       harbor  = ["harbor-admins"]
       grafana = ["grafana-editors", "grafana-admins"]
+      argocd  = ["argocd-admins", "argocd-viewers"]
     }
   }
 }
@@ -350,4 +351,50 @@ resource "authentik_application" "grafana" {
   slug              = "grafana-slug"
   protocol_provider = authentik_provider_oauth2.grafana.id
   meta_icon         = "https://simpleicons.org/icons/grafana.svg"
+}
+
+resource "random_password" "argocd_client_id" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "argocd_client_secret" {
+  length  = 64
+  special = true
+}
+
+resource "authentik_group" "argocd_groups" {
+  for_each = toset(local.authentik.groups.argocd)
+  name     = each.value
+}
+
+resource "authentik_provider_oauth2" "argocd" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name               = "argocd"
+  client_type        = "confidential"
+  client_id          = random_password.argocd_client_id.result
+  client_secret      = random_password.argocd_client_secret.result
+  authorization_flow = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  allowed_redirect_uris = [
+    {
+      matching_mode = "strict",
+      url           = "https://${local.argocd.host}/auth/callback",
+    }
+  ]
+  property_mappings = [
+    data.authentik_property_mapping_provider_scope.email.id,
+    data.authentik_property_mapping_provider_scope.profile.id,
+    data.authentik_property_mapping_provider_scope.openid.id,
+  ]
+  signing_key = data.authentik_certificate_key_pair.generated.id
+}
+
+resource "authentik_application" "argocd" {
+  name              = "argocd"
+  slug              = "argocd-slug"
+  protocol_provider = authentik_provider_oauth2.argocd.id
+  meta_icon         = "https://simpleicons.org/icons/argo.svg"
 }

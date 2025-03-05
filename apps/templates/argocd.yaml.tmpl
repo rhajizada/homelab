@@ -1,0 +1,51 @@
+global:
+  domain: ${host}
+
+dex:
+  enabled: false
+
+configs:
+  cm:
+    exec.enabled: true
+    admin.enabled: true
+    create: true
+    oidc.config: |
+      name: ${oauth_name}
+      issuer: ${oauth_issuer}
+      clientID: ${oauth_client_id}
+      clientSecret: $oidc.authentik.clientSecret
+      requestedScopes:
+%{ for scope in oauth_scopes ~}
+        - ${scope}
+%{ endfor ~}
+      requestedIDTokenClaims:
+        groups:
+          essential: true
+  rbac:
+    policy.csv: |
+      g, argocd-admins, role:admin
+      g, argocd-viewers, role:readonly
+  secret:
+    createSecret: true
+    argocdServerAdminPassword: ${admin_password}
+    extra:
+      oidc.authentik.clientSecret: ${oauth_client_secret}
+  params:
+    server.insecure: true
+    server.repo.server.plaintext: true
+    controller.repo.server.plaintext: true
+    applicationsetcontroller.repo.server.plaintext: true
+    reposerver.disable.tls: true
+
+server:
+  ingress:
+    enabled: true
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      cert-manager.io/cluster-issuer: "${cert_issuer}"
+    ingressClassName: traefik
+    hostname: "${host}"
+    tls:
+    - secretName: argocd-tls
+      hosts:
+      - "${host}"
