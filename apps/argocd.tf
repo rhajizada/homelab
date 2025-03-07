@@ -14,17 +14,14 @@ resource "kubernetes_namespace" "argocd_namespace" {
   }
 }
 
-resource "random_string" "argocd_bcrypt_salt" {
-  length  = 16
-  special = false
-}
-
 resource "random_password" "argocd_admin_password" {
   length  = 16
   special = false
 }
 
-
+resource "bcrypt_hash" "argocd_admin_password" {
+  cleartext = random_password.argocd_admin_password.result
+}
 
 resource "helm_release" "argocd" {
   depends_on = [
@@ -44,7 +41,7 @@ resource "helm_release" "argocd" {
     templatefile("${path.module}/templates/argocd.yaml.tmpl", {
       host                = local.argocd.host
       cert_issuer         = var.cluster_cert_issuer
-      admin_password      = bcrypt(random_password.argocd_admin_password.result, random_string.argocd_bcrypt_salt.result)
+      admin_password      = bcrypt_hash.argocd_admin_password.id
       oauth_name          = "authentik"
       oauth_issuer        = "https://${local.authentik.host}/application/o/argocd-slug/"
       oauth_client_id     = random_password.argocd_client_id.result
