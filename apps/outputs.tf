@@ -38,3 +38,8 @@ output "minio_admin_credentials" {
   sensitive = true
 }
 
+output "argocd_admin_password" {
+  description = "argocd admin password"
+  value       = random_password.argocd_admin_password.result
+  sensitive   = true
+}

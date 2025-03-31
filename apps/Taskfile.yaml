@@ -80,7 +80,7 @@ tasks:
   secrets:
     desc: "Show bootstrap/admin credentials for a specified app"
     preconditions:
-      - sh: '[ "{{.app}}" = "authentik" ] || [ "{{.app}}" = "gitea" ] || [ "{{.app}}" = "minio" ] || [ "{{.app}}" = "harbor" || [ "{{.app}}" = "grafana" ]'
+      - sh: '[ "{{.app}}" = "authentik" ] || [ "{{.app}}" = "gitea" ] || [ "{{.app}}" = "minio" ] || [ "{{.app}}" = "harbor" ] || [ "{{.app}}" = "grafana" ] || [ "{{.app}}" = "argocd" ]'
         msg: "invalid app '{{.app}}'. Valid options are: authentik, gitea, minio, harbor."
     cmds:
       - |
@@ -102,6 +102,9 @@ tasks:
           grafana)
             echo "Username: $({{.TF}} output -json | jq -r '.grafana_admin_credentials.value.username')"
             echo "Password: $({{.TF}} output -json | jq -r '.grafana_admin_credentials.value.password')"
+            ;;
+          argocd)
+            echo "Password: $({{.TF}} output -json | jq -r '.argocd_admin_password.value')"
             ;;
         esac
     silent: true
