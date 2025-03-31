@@ -1,0 +1,48 @@
+ollama:
+  enabled: true
+  fullnameOverride: open-webui-ollama
+  ollama:
+    models:
+      pull:
+        - deepseek-r1:1.5b
+      run:
+        - deepseek-r1:1.5b
+  persistentVolume:
+    enabled: true
+    accessModes:
+      - ReadWriteMany
+    storageClass: longhorn
+    size: ${ollama_size}
+
+pipelines:
+  enabled: true
+
+tika:
+  enabled: true
+
+websocket:
+  enabled: true
+  url: redis://open-webui-redis:6379/0
+
+redis-cluster:
+  enabled: true
+  fullnameOverride: open-webui-redis
+  auth:
+    enabled: true
+  replica:
+    replicaCount: 1
+
+ingress:
+  enabled: false
+  class: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: ${cert_issuer}
+  host: ${host}
+  tls: true
+  existingSecret: openwebui-tls
+
+persistence:
+  enabled: true
+  size: ${storage_size}
+
