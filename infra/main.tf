@@ -6,6 +6,7 @@ locals {
   k8s_lb_ip        = cidrhost(var.cluster_ip_range, 4)
   control_node_ips = [for i in range(var.talos_vm_config.control.count) : cidrhost(var.cluster_ip_range, 5 + i)]
   worker_node_ips  = [for i in range(var.talos_vm_config.worker.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + i)]
+  gpu_node_ips     = [for i in range(var.talos_gpu_vm_config.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + i)]
 }
 
 module "vpn" {
@@ -60,8 +61,10 @@ module "talos" {
   k8s_lb_ip               = local.k8s_lb_ip
   control_node_ips        = local.control_node_ips
   worker_node_ips         = local.worker_node_ips
+  gpu_node_ips            = local.gpu_node_ips
   talos_version           = var.talos_version
   vm_config               = var.talos_vm_config
+  gpu_vm_config           = var.talos_gpu_vm_config
   aws_iam_credentials     = module.route53.talos_iam_user
   aws_region              = module.route53.aws_region
   aws_route53_zone_id     = module.route53.route_53_zone_id

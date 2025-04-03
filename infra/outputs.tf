@@ -18,6 +18,12 @@ output "talos_worker_ips" {
   value       = module.talos.worker_ips
 }
 
+
+output "talos_gpu_node_ips" {
+  description = "IP addresses of the gpu nodes"
+  value       = module.talos.gpu_node_ips
+}
+
 output "talos_config" {
   description = "Talos cluster client configuration"
   sensitive   = true
