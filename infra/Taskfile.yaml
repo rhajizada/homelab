@@ -189,7 +189,6 @@ tasks:
     desc: "Generate wireguard client configuration"
     vars:
       output_file: "{{.OUTPUT_DIR}}/wireguard/{{.NAME}}.conf"
-      symlink: "{{.symlink | default false}}"
     preconditions:
       - sh: '{{.TF}} state list | grep -q "module.vpn"'
         msg: "vpn instance is not deployed yet, apply configuration first"
