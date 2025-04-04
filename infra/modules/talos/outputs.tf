@@ -18,9 +18,9 @@ output "worker_ips" {
   value       = [for node in local.worker_nodes : node.address]
 }
 
-output "gpu_node_ips" {
-  description = "IP addresses of the gpu nodes"
-  value       = [for node in local.gpu_nodes : node.address]
+output "gpu_node_ip" {
+  description = "IP addresses of the GPU node"
+  value       = local.gpu_node.address
 }
 
 output "kubeconfig" {

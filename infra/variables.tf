@@ -125,8 +125,8 @@ variable "talos_vm_config" {
 variable "talos_gpu_vm_config" {
   description = "Configuration for GPU node VMs"
   type = object({
-    count = number
-    cpu   = number
+    enabled = bool
+    cpu     = number
     disk = object({
       datastore_id = string
       interface    = string
@@ -240,3 +240,4 @@ variable "dns_vm_config" {
     network = "vmbr0"
   }
 }
+

@@ -11,12 +11,10 @@ locals {
       address = var.worker_node_ips[i]
     }
   ]
-  gpu_nodes = [
-    for i in range(var.gpu_vm_config.count) : {
-      name    = "${var.cluster_name}-${var.environment}-gpu-${i}"
-      address = var.gpu_node_ips[i]
-    }
-  ]
+  gpu_node = {
+    name    = "${var.cluster_name}-${var.environment}-worker-gpu"
+    address = var.gpu_node_ip
+  }
 }
 
 
@@ -135,10 +133,10 @@ resource "proxmox_virtual_environment_vm" "talos_worker" {
 }
 
 resource "proxmox_virtual_environment_vm" "talos_gpu" {
-  count           = var.gpu_vm_config.count
-  name            = local.gpu_nodes[count.index].name
+  count           = var.gpu_vm_config.enabled ? 1 : 0
+  name            = local.gpu_node.name
   node_name       = var.proxmox_node_name
-  tags            = sort([var.cluster_name, var.environment, "talos", "gpu", "terraform"])
+  tags            = sort([var.cluster_name, var.environment, "talos", "worker", "gpu", "terraform"])
   stop_on_destroy = true
   bios            = "ovmf"
   machine         = "q35"
@@ -189,7 +187,7 @@ resource "proxmox_virtual_environment_vm" "talos_gpu" {
   initialization {
     ip_config {
       ipv4 {
-        address = "${local.gpu_nodes[count.index].address}/24"
+        address = "${local.gpu_node.address}/24"
         gateway = var.cluster_network_gateway
       }
     }

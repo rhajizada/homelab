@@ -270,13 +270,13 @@ resource "talos_machine_configuration_apply" "gpu" {
   count                       = 1
   client_configuration        = talos_machine_secrets.cluster.client_configuration
   machine_configuration_input = data.talos_machine_configuration.gpu.machine_configuration
-  endpoint                    = local.gpu_nodes[count.index].address
-  node                        = local.gpu_nodes[count.index].address
+  endpoint                    = local.gpu_node.address
+  node                        = local.gpu_node.address
   config_patches = [
     yamlencode({
       machine = {
         network = {
-          hostname = local.gpu_nodes[count.index].name
+          hostname = local.gpu_node.name
         }
       }
     }),

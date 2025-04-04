@@ -6,7 +6,7 @@ locals {
   k8s_lb_ip        = cidrhost(var.cluster_ip_range, 4)
   control_node_ips = [for i in range(var.talos_vm_config.control.count) : cidrhost(var.cluster_ip_range, 5 + i)]
   worker_node_ips  = [for i in range(var.talos_vm_config.worker.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + i)]
-  gpu_node_ips     = [for i in range(var.talos_gpu_vm_config.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + i)]
+  gpu_node_ip      = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 1)
 }
 
 module "vpn" {
@@ -61,7 +61,7 @@ module "talos" {
   k8s_lb_ip               = local.k8s_lb_ip
   control_node_ips        = local.control_node_ips
   worker_node_ips         = local.worker_node_ips
-  gpu_node_ips            = local.gpu_node_ips
+  gpu_node_ip             = local.gpu_node_ip
   talos_version           = var.talos_version
   vm_config               = var.talos_vm_config
   gpu_vm_config           = var.talos_gpu_vm_config

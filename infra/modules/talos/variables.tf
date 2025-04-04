@@ -93,9 +93,9 @@ variable "worker_node_ips" {
   type        = list(any)
 }
 
-variable "gpu_node_ips" {
-  description = "List of gpu node IP adresses"
-  type        = list(any)
+variable "gpu_node_ip" {
+  description = "GPU node IP address"
+  type        = string
 }
 
 
@@ -168,8 +168,8 @@ variable "vm_config" {
 variable "gpu_vm_config" {
   description = "Configuration for GPU node VMs"
   type = object({
-    count = number
-    cpu   = number
+    enabled = bool
+    cpu     = number
     disk = object({
       datastore_id = string
       interface    = string
@@ -193,8 +193,8 @@ variable "gpu_vm_config" {
     network = string
   })
   default = {
-    count = 1
-    cpu   = 4
+    enabled = false
+    cpu     = 4
     disk = {
       datastore_id = "local-lvm"
       interface    = "scsi0"
