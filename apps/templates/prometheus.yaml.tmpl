@@ -1,18 +1,15 @@
-ingress:
-  enabled: false
-
-service:
-  type: ClusterIP
-
 server:
   extraFlags:
     - web.enable-lifecycle
   retention: "15d"
-
-persistentVolume:
-  enabled: true
-  size: ${storage_size}
-  accessMode: ReadWriteMany
+  ingress:
+    enabled: false
+  service:
+    type: ClusterIP
+  persistentVolume:
+    enabled: true
+    size: ${storage_size}
+    accessMode: ReadWriteMany
 
 alertmanager:
   enabled: true
@@ -25,9 +22,6 @@ kube-state-metrics:
 
 prometheus-node-exporter:
   enabled: true
-
-
-prometheus-node-exporter:
   rbac:
     pspEnabled: false
   podAnnotations:
@@ -35,3 +29,20 @@ prometheus-node-exporter:
 
 prometheus-pushgateway:
   enabled: true
+
+extraScrapeConfigs: |
+  - job_name: "traefik"
+    metrics_path: /metrics
+    scheme: http
+    kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+            - traefik
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_service_label_app]
+        regex: traefik
+        action: keep
+      - source_labels: [__meta_kubernetes_endpoint_port_name]
+        regex: metrics
+        action: keep

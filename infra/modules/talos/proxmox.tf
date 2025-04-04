@@ -1,13 +1,13 @@
 locals {
   control_nodes = [
     for i in range(var.vm_config["control"].count) : {
-      name    = "${var.cluster_name}-${var.environment}-ctrl-${i}"
+      name    = "${var.cluster_name}-${var.environment}-ctrl-${i + 1}"
       address = var.control_node_ips[i]
     }
   ]
   worker_nodes = [
     for i in range(var.vm_config["worker"].count) : {
-      name    = "${var.cluster_name}-${var.environment}-worker-${i}"
+      name    = "${var.cluster_name}-${var.environment}-worker-${i + 1}"
       address = var.worker_node_ips[i]
     }
   ]

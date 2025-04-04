@@ -1,2 +1,14 @@
 preUpgradeChecker:
   jobEnabled: false
+metrics:
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: prometheus
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9500"
+    interval: "30s"
+    scrapeTimeout: "10s"
+    relabelings: []
+    metricRelabelings: []
