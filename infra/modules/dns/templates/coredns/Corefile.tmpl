@@ -15,6 +15,8 @@ ${base_domain}:53 {
         match ".*"
         answer "{{.Name}} 60 IN AAAA ::"
     }
+
+    forward . tls://8.8.8.8 tls://8.8.4.4
 }
 
 . {
