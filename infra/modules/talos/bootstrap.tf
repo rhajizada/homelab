@@ -127,6 +127,9 @@ locals {
   }
   gpu_node_machine_config = {
     machine = {
+      nodeLabels = {
+        "nvidia.com/gpu.present" = true
+      }
       install = {
         image = "factory.talos.dev/installer/${talos_image_factory_schematic.gpu.id}:${var.talos_version}"
       }
