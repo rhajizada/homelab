@@ -276,6 +276,15 @@ resource "authentik_group" "harbor_groups" {
   name     = each.value
 }
 
+resource "authentik_property_mapping_provider_scope" "preferred_username" {
+  depends_on = [helm_release.authentik]
+  name       = "authentik preferred_username OAuth Mapping: OpenID 'preferred_username'"
+  expression = <<EOF
+    return { "preferred_username": request.user.attributes.get("username", "") }
+EOF
+  scope_name = "preferred_username"
+}
+
 resource "authentik_provider_oauth2" "harbor" {
   depends_on = [
     helm_release.authentik
@@ -296,6 +305,7 @@ resource "authentik_provider_oauth2" "harbor" {
     data.authentik_property_mapping_provider_scope.email.id,
     data.authentik_property_mapping_provider_scope.profile.id,
     data.authentik_property_mapping_provider_scope.openid.id,
+    authentik_property_mapping_provider_scope.preferred_username.id
   ]
   signing_key = data.authentik_certificate_key_pair.generated.id
 }
