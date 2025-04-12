@@ -13,6 +13,10 @@ ports:
         to: websecure
         scheme: https
         permanent: true
+    transport:
+      respondingTimeouts:
+        readTimeout: 0
+        writeTimeout: 0
   websecure:
     expose:
       default: true
