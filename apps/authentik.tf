@@ -436,7 +436,7 @@ resource "authentik_group" "openwebui_admin_group" {
 resource "authentik_group" "openwebui_user_group" {
   depends_on = [authentik_rbac_role.openwebui_user_role]
   name       = "openwebui-users"
-  roles      = [authentik_rbac_role.openwebui_admin_role.id]
+  roles      = [authentik_rbac_role.openwebui_user_role.id]
 }
 
 resource "authentik_provider_oauth2" "openwebui" {
@@ -452,7 +452,7 @@ resource "authentik_provider_oauth2" "openwebui" {
   allowed_redirect_uris = [
     {
       matching_mode = "strict",
-      url           = "http://192.168.1.234:32000/oauth/oidc/callback",
+      url           = "http://192.168.1.233:32000/oauth/oidc/callback",
     }
   ]
   property_mappings = [

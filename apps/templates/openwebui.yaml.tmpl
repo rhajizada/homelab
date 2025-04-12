@@ -20,6 +20,8 @@ nodeSelector:
 extraEnvVars:
   - name: ENV
     value: "dev"
+  - name: ENABLE_OPENAI_API
+    value: "false"
   - name: SHOW_ADMIN_DETAILS
     value: "false"
   - name: ENABLE_LOGIN_FORM
@@ -48,6 +50,16 @@ extraEnvVars:
     value: "${openid_provider_name}"
   - name: OPENID_REDIRECT_URI
     value: "${openid_redirect_uri}"
+  - name: ENABLE_RAG_WEB_SEARCH
+    value: "true"
+  - name: ENABLE_SEARCH_QUERY_GENERATION
+    value: "true"
+  - name: RAG_WEB_SEARCH_RESULT_COUNT
+    value: "5"
+  - name: RAG_WEB_SEARCH_ENGINE
+    value: "duckduckgo"
+  - name: RAG_WEB_LOADER_ENGINE
+    value: "safe_web"
 
 runtimeClassName: nvidia
 

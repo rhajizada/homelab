@@ -58,7 +58,7 @@ resource "helm_release" "openwebui" {
       ollama_size          = local.openwebui.ollama.storage_size
       openid_provider_url  = "https://${local.authentik.host}/application/o/openwebui-slug/.well-known/openid-configuration"
       openid_provider_name = "authentik"
-      openid_redirect_uri  = "http://192.168.1.234:32000/oauth/oidc/callback"
+      openid_redirect_uri  = "http://192.168.1.233:32000/oauth/oidc/callback"
     })
   ]
 }
