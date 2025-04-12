@@ -44,6 +44,7 @@ variable "extensions" {
   type        = list(string)
   default = [
     "iscsi-tools",
+    "util-linux-tools",
     "qemu-guest-agent"
   ]
 }

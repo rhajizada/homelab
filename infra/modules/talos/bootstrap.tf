@@ -101,6 +101,12 @@ locals {
           contents = data.helm_template.longhorn.manifest
         },
         {
+          name = "nvidia-device-plugin"
+          contents = templatefile("${path.module}/templates/nvidia-device-plugin.yaml.tmpl", {
+            version = local.nvidia_device_plugin.version
+          })
+        },
+        {
           name     = "nvidia"
           contents = file("${path.module}/templates/nvidia.yaml")
         }
