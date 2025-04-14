@@ -21,6 +21,10 @@ ports:
     expose:
       default: true
     exposedPort: 443
+    transport:
+      respondingTimeouts:
+        readTimeout: 0
+        writeTimeout: 0
 
 metrics:
   prometheus:
