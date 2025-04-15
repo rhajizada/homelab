@@ -1,0 +1,26 @@
+replicaCount: 1
+kind: Deployment
+
+env:
+  - name: ANONYMIZED_TELEMETRY
+    value: "False"
+  - name: ALLOW_RESET
+    value: "True"
+  - name: IS_PERSISTENT
+    value: "True"
+
+serviceAccount:
+  create: true
+  automount: true
+
+service:
+  type: ClusterIP
+  port: 8000
+
+pvc:
+  enabled: true
+  persistentVolumeClaim:
+    accessModes:
+      - ReadWriteMany
+    name: "chroma-db-data"
+    size: "${storage_size}"

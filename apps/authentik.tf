@@ -467,5 +467,5 @@ resource "authentik_application" "openwebui" {
   name              = "Open WebUI"
   slug              = "openwebui-slug"
   protocol_provider = authentik_provider_oauth2.openwebui.id
-  meta_icon         = "https://simpleicons.org/icons/openai.svg"
+  meta_icon         = "https://simpleicons.org/icons/langchain.svg"
 }
