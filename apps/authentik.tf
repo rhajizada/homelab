@@ -283,6 +283,9 @@ resource "authentik_property_mapping_provider_scope" "preferred_username" {
     return { "preferred_username": request.user.attributes.get("username", "") }
 EOF
   scope_name = "preferred_username"
+  lifecycle {
+    ignore_changes = [expression]
+  }
 }
 
 resource "authentik_provider_oauth2" "harbor" {
@@ -452,7 +455,7 @@ resource "authentik_provider_oauth2" "openwebui" {
   allowed_redirect_uris = [
     {
       matching_mode = "strict",
-      url           = "http://192.168.1.233:32000/oauth/oidc/callback",
+      url           = "https://${local.openwebui.host}/oauth/oidc/callback",
     }
   ]
   property_mappings = [

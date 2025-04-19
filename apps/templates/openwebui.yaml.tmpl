@@ -67,7 +67,7 @@ extraEnvVars:
   - name: ENABLE_SEARCH_QUERY_GENERATION
     value: "true"
   - name: RAG_WEB_SEARCH_RESULT_COUNT
-    value: "5"
+    value: "3"
   - name: RAG_WEB_SEARCH_ENGINE
     value: "duckduckgo"
   - name: RAG_WEB_LOADER_ENGINE
@@ -79,7 +79,7 @@ extraEnvVars:
   - name: RAG_EMBEDDING_MODEL
     value: "nomic-embed-text"
   - name: REDIS_URL
-    value: "redis://open-webui-redis.openwebui.svc.cluster.local:6379/0"
+    value: "redis://open-webui-redis-master.openwebui.svc.cluster.local:6379/0"
   - name: CONTENT_EXTRACTION_ENGINE
     value: "tika"
   - name: CHROMA_HTTP_HOST
@@ -94,9 +94,14 @@ runtimeClassName: nvidia
 
 websocket:
   enabled: true
-  url: redis://open-webui-redis.openwebui.svc.cluster.local:6379/1
+  url: redis://open-webui-redis-master.openwebui.svc.cluster.local:6379/1
   redis:
-    enabled: true
+    enabled: false
+
+redis-cluster:
+  enabled: true
+  replica:
+    replicaCount: 2
 
 pipelines:
   enabled: true
@@ -107,13 +112,8 @@ pipelines:
           name: openwebui-pipelines-secret
           key: key
 
-service:
-  type: NodePort
-  containerPort: 8080
-  nodePort: "32000"
-
 ingress:
-  enabled: false
+  enabled: true
   class: traefik
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure

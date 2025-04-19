@@ -5,7 +5,7 @@ locals {
     version    = "6.1.0"
     namespace  = "openwebui"
 
-    host         = "openwebui.${var.base_domain}"
+    host         = "chat.${var.base_domain}"
     storage_size = "16Gi"
     ollama = {
       volume_name  = "openwebui-ollama-pv"
@@ -22,7 +22,7 @@ locals {
     repository   = "https://infracloudio.github.io/charts"
     chart        = "chromadb"
     version      = "0.1.4"
-    storage_size = "32Gi"
+    storage_size = "16Gi"
   }
   tika = {
     repository = "https://apache.jfrog.io/artifactory/tika"
@@ -155,12 +155,13 @@ resource "helm_release" "openwebui" {
       ollama_size          = local.openwebui.ollama.storage_size
       openid_provider_url  = "https://${local.authentik.host}/application/o/openwebui-slug/.well-known/openid-configuration"
       openid_provider_name = "authentik"
-      openid_redirect_uri  = "http://192.168.1.233:32000/oauth/oidc/callback"
+      openid_redirect_uri  = "https://${local.openwebui.host}/oauth/oidc/callback"
     })
   ]
 }
 
-resource "kubernetes_pod" "ollama_init" {
+
+resource "kubernetes_job" "ollama_init" {
   depends_on = [
     helm_release.openwebui
   ]
@@ -173,19 +174,31 @@ resource "kubernetes_pod" "ollama_init" {
   }
 
   spec {
-    active_deadline_seconds = 3600
+    # run exactly once, no retries
+    completions   = 1
+    parallelism   = 1
+    backoff_limit = 0
 
-    container {
-      name  = "ollama-init"
-      image = "alpine/curl"
-      command = [
-        "sh",
-        "-c",
-        "curl -s http://open-webui-ollama.openwebui.svc.cluster.local:11434/api/pull -d '{\"model\": \"${each.value}\"}'"
-      ]
+    template {
+      metadata {
+        labels = {
+          job = "open-webui-ollama-init-${replace(replace(each.value, ".", "-"), ":", "-")}"
+        }
+      }
+
+      spec {
+
+        container {
+          name  = "ollama-init"
+          image = "alpine/curl"
+          command = [
+            "sh",
+            "-c",
+            "curl -s http://open-webui-ollama.openwebui.svc.cluster.local:11434/api/pull -d '{\"model\": \"${each.value}\"}'"
+          ]
+        }
+      }
     }
-
-    restart_policy = "Never"
   }
 
   timeouts {
@@ -193,3 +206,5 @@ resource "kubernetes_pod" "ollama_init" {
     delete = "1h"
   }
 }
+
+
