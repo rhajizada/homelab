@@ -85,7 +85,7 @@ variable "environment" {
 variable "talos_version" {
   description = "Version of Talos to deploy"
   type        = string
-  default     = "v1.9.2"
+  default     = "v1.9.5"
 }
 
 variable "k8s_version" {
@@ -97,18 +97,6 @@ variable "k8s_version" {
     error_message = "must be a version number"
   }
 }
-
-#  please see https://github.com/siderolabs/extensions?tab=readme-ov-file#installing-extensions
-variable "talos_extensions" {
-  description = "Map of Talos extension name to a specific version"
-  type        = map(string)
-  default = {
-    "intel-ucode"      = "20241112"
-    "iscsi-tools"      = "v0.1.6"
-    "qemu-guest-agent" = "9.2.0"
-  }
-}
-
 
 variable "talos_vm_config" {
   description = "Configuration for worker and control node VMs"
@@ -132,6 +120,35 @@ variable "talos_vm_config" {
     memory  = number
     network = string
   }))
+}
+
+variable "talos_gpu_vm_config" {
+  description = "Configuration for GPU node VMs"
+  type = object({
+    enabled = bool
+    cpu     = number
+    disk = object({
+      datastore_id = string
+      interface    = string
+      iothread     = bool
+      ssd          = bool
+      discard      = string
+      size         = number
+      file_format  = string
+    })
+    efi_disk = object({
+      datastore_id = string
+      file_format  = string
+      type         = string
+    })
+    hostpci = object({
+      device = string
+      id     = string
+      pcie   = bool
+    })
+    memory  = number
+    network = string
+  })
 }
 
 variable "ubuntu_version" {
@@ -223,3 +240,4 @@ variable "dns_vm_config" {
     network = "vmbr0"
   }
 }
+

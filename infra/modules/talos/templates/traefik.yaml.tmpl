@@ -13,8 +13,32 @@ ports:
         to: websecure
         scheme: https
         permanent: true
+    transport:
+      respondingTimeouts:
+        readTimeout: 0
+        writeTimeout: 0
   websecure:
     expose:
       default: true
     exposedPort: 443
+    transport:
+      respondingTimeouts:
+        readTimeout: 0
+        writeTimeout: 0
 
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    buckets: "0.1,0.3,1.2,5.0"
+    manualRouting: false
+    headerLabels: {}
+    service:
+      enabled: true
+      labels:
+        app: traefik
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"

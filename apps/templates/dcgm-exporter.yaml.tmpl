@@ -1,0 +1,22 @@
+arguments:
+  - "-f"
+  - "/etc/dcgm-exporter/default-counters.csv"
+
+nodeSelector:
+  nvidia.com/gpu.present: "true"
+
+tolerations:
+  - operator: Exists
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9400"
+
+service:
+  enable: true
+  type: ClusterIP
+  port: 9400
+  address: ":9400"
+
+serviceMonitor:
+  enabled: false

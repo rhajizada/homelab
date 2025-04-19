@@ -8,7 +8,7 @@ locals {
     admin = {
       username = "admin"
     }
-    storage_size = "120Gi"
+    storage_size = "256Gi"
   }
 }
 

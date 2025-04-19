@@ -18,6 +18,11 @@ output "worker_ips" {
   value       = [for node in local.worker_nodes : node.address]
 }
 
+output "gpu_node_ip" {
+  description = "IP addresses of the GPU node"
+  value       = local.gpu_node.address
+}
+
 output "kubeconfig" {
   description = "K8s cluster kubeconfig"
   sensitive   = true

@@ -1,0 +1,12 @@
+config:
+  base_url: http://tika.openwebui.svc.cluster.local:9998/
+
+networkPolicy:
+  allowExternal: false
+  enabled: false
+
+replicaCount: 1
+
+service:
+  port: 9998
+  type: ClusterIP

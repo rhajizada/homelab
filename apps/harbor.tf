@@ -59,7 +59,7 @@ resource "kubernetes_secret" "harbor_oidc_config" {
   }
 
   data = {
-    config_overwrite_json = "{\"auth_mode\": \"oidc_auth\", \"oidc_name\": \"authentik\", \"oidc_endpoint\": \"https://${local.authentik.host}/application/o/harbor-slug/\", \"oidc_client_id\": \"${random_password.harbor_client_id.result}\", \"oidc_client_secret\": \"${random_password.harbor_client_secret.result}\", \"oidc_groups_claim\": \"groups\", \"oidc_admin_group\": \"harbor-admins\", \"oidc_scope\": \"openid,profile,email\", \"oidc_verify_cert\": \"true\", \"oidc_auto_onboard\": \"true\", \"oidc_user_claim\": \"preferred_username\"}"
+    config_overwrite_json = "{\"auth_mode\": \"oidc_auth\", \"oidc_name\": \"authentik\", \"oidc_endpoint\": \"https://${local.authentik.host}/application/o/harbor-slug/\", \"oidc_client_id\": \"${random_password.harbor_client_id.result}\", \"oidc_client_secret\": \"${random_password.harbor_client_secret.result}\", \"oidc_groups_claim\": \"groups\", \"oidc_admin_group\": \"harbor-admins\", \"oidc_scope\": \"openid,profile,email,preferred_username\", \"oidc_verify_cert\": \"true\", \"oidc_auto_onboard\": \"true\", \"oidc_user_claim\": \"preferred_username\"}"
   }
 
   type = "Opaque"

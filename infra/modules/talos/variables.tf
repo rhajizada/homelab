@@ -40,12 +40,22 @@ variable "environment" {
 }
 
 variable "extensions" {
-  description = "Map of Talos extension name to a specific version"
-  type        = map(string)
-  default = {
-    "iscsi-tools"      = "v0.1.6"
-    "qemu-guest-agent" = "9.2.0"
-  }
+  description = "Talos extensions to instal on all nodes"
+  type        = list(string)
+  default = [
+    "iscsi-tools",
+    "util-linux-tools",
+    "qemu-guest-agent"
+  ]
+}
+
+variable "gpu_extensions" {
+  description = "Talos extensions to install on GPU nodes"
+  type        = list(string)
+  default = [
+    "nvidia-container-toolkit-production",
+    "nvidia-open-gpu-kernel-modules-production"
+  ]
 }
 
 variable "talos_version" {
@@ -83,6 +93,12 @@ variable "worker_node_ips" {
   description = "List of worker node IP adresses"
   type        = list(any)
 }
+
+variable "gpu_node_ip" {
+  description = "GPU node IP address"
+  type        = string
+}
+
 
 variable "vm_config" {
   description = "Configuration for worker and control node VMs"
@@ -146,7 +162,62 @@ variable "vm_config" {
       }
       memory  = 4096
       network = "vmbr0"
-  } }
+    }
+  }
+}
+
+variable "gpu_vm_config" {
+  description = "Configuration for GPU node VMs"
+  type = object({
+    enabled = bool
+    cpu     = number
+    disk = object({
+      datastore_id = string
+      interface    = string
+      iothread     = bool
+      ssd          = bool
+      discard      = string
+      size         = number
+      file_format  = string
+    })
+    efi_disk = object({
+      datastore_id = string
+      file_format  = string
+      type         = string
+    })
+    hostpci = object({
+      device = string
+      id     = string
+      pcie   = bool
+    })
+    memory  = number
+    network = string
+  })
+  default = {
+    enabled = false
+    cpu     = 4
+    disk = {
+      datastore_id = "local-lvm"
+      interface    = "scsi0"
+      iothread     = true
+      ssd          = true
+      discard      = "on"
+      size         = 128
+      file_format  = "raw"
+    }
+    efi_disk = {
+      datastore_id = "local-lvm"
+      file_format  = "raw"
+      type         = "4m"
+    }
+    hostpci = {
+      device = "hostpci0"
+      id     = "03:00.0"
+      pcie   = true
+    }
+    memory  = 4096
+    network = "vmbr0"
+  }
 }
 
 variable "aws_region" {

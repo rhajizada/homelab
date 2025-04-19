@@ -3,11 +3,7 @@ locals {
   common_machine_config = {
     machine = {
       install = {
-        extensions = [
-          for name, version in var.extensions : {
-            image = "ghcr.io/siderolabs/${name}:${version}"
-          }
-        ]
+        image = "factory.talos.dev/installer/${talos_image_factory_schematic.common.id}:${var.talos_version}"
       }
       features = {
         # see https://www.talos.dev/v1.8/talos-guides/network/host-dns/
@@ -54,7 +50,8 @@ locals {
         "https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml",
         "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml",
         "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml",
-        "https://github.com/cert-manager/cert-manager/releases/download/v${local.cert_manager.version}/cert-manager.crds.yaml"
+        "https://github.com/cert-manager/cert-manager/releases/download/v${local.cert_manager.version}/cert-manager.crds.yaml",
+        "https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v${local.nvidia_device_plugin.version}/deployments/static/nvidia-device-plugin.yml"
       ]
       inlineManifests = [
         {
@@ -102,23 +99,22 @@ locals {
         {
           name     = "longhorn"
           contents = data.helm_template.longhorn.manifest
+        },
+        {
+          name = "nvidia-device-plugin"
+          contents = templatefile("${path.module}/templates/nvidia-device-plugin.yaml.tmpl", {
+            version = local.nvidia_device_plugin.version
+          })
+        },
+        {
+          name     = "nvidia"
+          contents = file("${path.module}/templates/nvidia.yaml")
         }
       ]
     }
   }
   worker_node_machine_config = {
     machine = {
-      # sysctls = {
-      #   "vm.nr_hugepages" = "1024"
-      # }
-      # nodeLabels = {
-      #   "openebs.io/engine" = "mayastor"
-      # }
-      # disks = [
-      #   {
-      #     device = "/dev/sda"
-      #   }
-      # ]
       kubelet = {
         extraMounts = [
           {
@@ -131,6 +127,47 @@ locals {
               "rw",
             ]
           },
+        ]
+      }
+    }
+  }
+  gpu_node_machine_config = {
+    machine = {
+      nodeLabels = {
+        "nvidia.com/gpu.present" = true
+      }
+      install = {
+        image = "factory.talos.dev/installer/${talos_image_factory_schematic.gpu.id}:${var.talos_version}"
+      }
+      features = {
+        # see https://www.talos.dev/v1.8/talos-guides/network/host-dns/
+        hostDNS = {
+          enabled              = true
+          forwardKubeDNSToHost = true
+        }
+      }
+      kubelet = {
+        extraArgs = {
+          rotate-server-certificates = true
+        }
+      }
+      sysctls = {
+        "net.core.bpf_jit_harden" = 1
+      }
+      kernel = {
+        modules = [
+          {
+            name = "nvidia"
+          },
+          {
+            name = "nvidia_uvm"
+          },
+          {
+            name = "nvidia_drm"
+          },
+          {
+            name = "nvidia_modeset"
+          }
         ]
       }
     }
@@ -166,6 +203,19 @@ data "talos_machine_configuration" "worker" {
   config_patches = [
     yamlencode(local.common_machine_config),
     yamlencode(local.worker_node_machine_config),
+  ]
+}
+
+data "talos_machine_configuration" "gpu" {
+  cluster_name       = var.cluster_name
+  machine_type       = "worker"
+  cluster_endpoint   = local.cluster_endpoint
+  talos_version      = var.talos_version
+  kubernetes_version = var.k8s_version
+  machine_secrets    = talos_machine_secrets.cluster.machine_secrets
+  config_patches = [
+    yamlencode(local.gpu_node_machine_config),
+    yamlencode(local.worker_node_machine_config)
   ]
 }
 
@@ -225,11 +275,32 @@ resource "talos_machine_configuration_apply" "worker" {
   ]
 }
 
+resource "talos_machine_configuration_apply" "gpu" {
+  count                       = 1
+  client_configuration        = talos_machine_secrets.cluster.client_configuration
+  machine_configuration_input = data.talos_machine_configuration.gpu.machine_configuration
+  endpoint                    = local.gpu_node.address
+  node                        = local.gpu_node.address
+  config_patches = [
+    yamlencode({
+      machine = {
+        network = {
+          hostname = local.gpu_node.name
+        }
+      }
+    }),
+    file("${path.module}/templates/nvidia-default-runtimeclass.yaml")
+  ]
+  depends_on = [
+    proxmox_virtual_environment_vm.talos_gpu,
+  ]
+}
+
 resource "talos_machine_bootstrap" "talos" {
   client_configuration = talos_machine_secrets.cluster.client_configuration
   endpoint             = local.control_nodes[0].address
   node                 = local.control_nodes[0].address
   depends_on = [
-    talos_machine_configuration_apply.control,
+    talos_machine_configuration_apply.control
   ]
 }
