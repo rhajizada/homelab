@@ -14,7 +14,9 @@ locals {
         "deepseek-r1:14b",
         "gemma3:12b",
         "llama3.1:8b",
+        "mistral",
         "phi4:14b",
+        "qwen2.5-coder:14b",
       ]
     }
   }
