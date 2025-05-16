@@ -43,3 +43,13 @@ output "argocd_admin_password" {
   value       = random_password.argocd_admin_password.result
   sensitive   = true
 }
+
+
+output "gazette_oauth_credentials" {
+  description = "Gazette OAuth credentials"
+  value = {
+    client_id     = authentik_provider_oauth2.gazette.client_id
+    client_secret = authentik_provider_oauth2.gazette.client_secret
+  }
+  sensitive = true
+}
