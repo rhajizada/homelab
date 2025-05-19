@@ -496,6 +496,10 @@ resource "authentik_provider_oauth2" "gazette" {
   allowed_redirect_uris = [
     {
       matching_mode = "strict",
+      url           = "https://${local.gazette.host}/oauth/callback",
+    },
+    {
+      matching_mode = "strict",
       url           = "http://localhost:8080/oauth/callback",
     }
   ]
