@@ -123,3 +123,14 @@ tasks:
         kubectl scale statefulset gitea-act-runner --replicas={{.count}} -n gitea
     vars:
       count: '{{.count | default ""}}'
+
+  setup-runners:
+    desc: "Install required packages on gitea runners"
+    preconditions:
+      - sh: "kubectl get statefulset gitea-act-runner -n gitea &> /dev/null"
+        msg: "StatefulSet 'gitea-act-runner' does not exist in the 'gitea' namespace."
+    vars:
+      pkgs:
+        sh: "xargs < data/requirements/gitea/packages.txt"
+    cmds:
+      - kubectl get pods -l app=gitea-act-runner -n gitea -o name | xargs -n1 -I{} kubectl exec {} -n gitea -- sh -c "apk add --no-cache {{.pkgs}}"
