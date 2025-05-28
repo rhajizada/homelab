@@ -125,12 +125,12 @@ tasks:
       count: '{{.count | default ""}}'
 
   setup-runners:
-    desc: "Install required packages on gitea runners"
+    desc: "Run bootstrap setup on gitea runners"
     preconditions:
       - sh: "kubectl get statefulset gitea-act-runner -n gitea &> /dev/null"
         msg: "StatefulSet 'gitea-act-runner' does not exist in the 'gitea' namespace."
-    vars:
-      pkgs:
-        sh: "xargs < data/requirements/gitea/packages.txt"
     cmds:
-      - kubectl get pods -l app=gitea-act-runner -n gitea -o name | xargs -n1 -I{} kubectl exec {} -n gitea -- sh -c "apk add --no-cache {{.pkgs}}"
+      - |
+        for pod in $(kubectl get pods -l app=gitea-act-runner -n gitea -o name); do
+          kubectl exec -i "$pod" -n gitea -- sh -s < scripts/gitea-act-runner/setup.sh
+        done

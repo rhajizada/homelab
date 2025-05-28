@@ -1,5 +1,0 @@
-alpine-sdk
-build-base
-curl
-libx11-dev
-nodejs
