@@ -125,7 +125,7 @@ tasks:
       count: '{{.count | default ""}}'
 
   setup-runners:
-    desc: "Run bootstrap setup on gitea runners"
+    desc: "Run setup script on gitea runners"
     preconditions:
       - sh: "kubectl get statefulset gitea-act-runner -n gitea &> /dev/null"
         msg: "StatefulSet 'gitea-act-runner' does not exist in the 'gitea' namespace."

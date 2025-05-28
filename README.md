@@ -53,84 +53,35 @@ _The router is configured to route all DNS traffic to the dedicated DNS server a
 
 ## Taskfile Workflow
 
-This project leverages [Taskfile](https://github.com/go-task/task) to streamline Terraform workflows. Each layer includes its own Taskfile, while a root Taskfile is also available to coordinate commands across both layers.
+This project leverages [Taskfile](https://github.com/go-task/task) to streamline _Terraform_ workflows. Each layer includes its own Taskfile, while a root Taskfile is also available to coordinate commands across both layers.
 
 ### Available Tasks
 
-**`infra` tasks:**
+#### Infrastructure
 
-- `infra:init`: Prepare your working directory for infrastructure commands.
-- `infra:validate`: Validate the infrastructure configuration.
-- `infra:plan`: Generate an execution plan for infrastructure changes.
-- `infra:apply`: Create or update the infrastructure.
-- `infra:destroy`: Tear down the infrastructure.
-- `infra:format`: Reformat infrastructure configuration files.
-- `infra:ssh`: Generate an SSH key and connect to a specified node (VPN or DNS).
-- `infra:kubeconfig`: Generate a kubeconfig file.
-- `infra:talosconfig`: Generate a Talos configuration file.
-- `infra:kubeseal`: Generate a kubeseal certificate.
-- `infra:wireguard`: Generate a WireGuard client configuration.
+- **infra:apply:** Create or update infrastructure
+- **infra:destroy:** Create or update infrastructure
+- **infra:format:** Reformat your configuration in the standard style
+- **infra:init:** Prepare your working directory for other commands
+- **infra:kubeconfig:** Generate 'kubeconfig'
+- **infra:kubeseal:** Generate kubeseal cerificate
+- **infra:plan:** Show changes required by the current configuration
+- **infra:ssh:** Generate SSH key and connect to specified node (vpn or dns)
+- **infra:talosconfig:** Generate 'talosconfig'
+- **infra:validate:** Check whether the configuration is valid
+- **infra:wireguard:** Generate wireguard client configuration
 
-**`apps` tasks:**
+#### Applications
 
-- `apps:init`: Prepare your working directory for app-level commands.
-- `apps:validate`: Validate the app configuration.
-- `apps:plan`: Generate an execution plan for app deployments.
-- `apps:apply`: Create or update app infrastructure.
-- `apps:destroy`: Tear down the app infrastructure.
-- `apps:format`: Reformat app configuration files.
-- `apps:scale-runners`: Scale Gitea action runners (0-10).
-- `apps:secrets`: Display bootstrap/admin credentials for a specified app.
-
-## Configuration
-
-Before deploying the homelab, you must set up several user variables. These can be defined in a `.env` file or directly in your Terraform variable files.
-
-### Infrastructure Variables
-
-Key variables for the **infra** layer include:
-
-- **Proxmox & Cluster Settings:**
-
-  - `proxmox_endpoint`: Proxmox host endpoint.
-  - `proxmox_primary_node`: Proxmox primary node name.
-  - `proxmox_secondary_node`: Proxmox secondary node name.
-  - `cluster_name`: Name of the Kubernetes cluster.
-  - `cluster_ip_range`: Range of IPs available for cluster VMs in CIDR format.  
-    _Note:_ This range must have enough usable IPs to cover all Talos nodes and additional services.
-  - `cluster_node_network`: The IP network of the cluster nodes (default: `192.168.1.1/24`).
-  - `cluster_network_gateway`: Gateway for the cluster nodes (default: `192.168.1.1`).
-
-- **DNS & Certificate Management:**
-
-  - `base_domain`: Base domain for serving the cluster (must be a valid domain name or an empty string).
-  - `acme_email`: Email to use for ACME registration.
-  - `acme_server`: ACME server URL for certificate issuance (default: `https://acme-staging-v02.api.letsencrypt.org/directory`).
-
-- **Kubernetes & Talos Settings:**
-
-  - `talos_version`: Version of Talos to deploy (default: `v1.9.2`).
-  - `k8s_version`: Version of Kubernetes to deploy (default: `1.32`).
-  - `talos_extensions`: Map of Talos extension names to versions (e.g., `"intel-ucode": "20241112"`, `"iscsi-tools": "v0.1.6"`, `"qemu-guest-agent": "9.2.0"`).
-  - `talos_vm_config`: Configuration for Talos control and worker VMs (includes CPU, memory, disk, and network settings).
-
-- **VPN & DNS VM Configurations:**
-
-  - `ubuntu_version`: Version of Ubuntu to deploy for the VPN VM (default: `"noble"`).
-  - `vpn_vm_config`: Configuration for VPN node VMs.
-  - `dns_vm_config`: Configuration for DNS node VMs.
-
-- **Environment:**
-  - `environment`: Environment name (e.g., `dev`, `staging`, `prod`).
-
-### Apps Variables
-
-Key variables for the **apps** layer include:
-
-- `base_domain`: Base domain for serving the cluster.
-- `k8s_version`: Version of Kubernetes to deploy.
-- `kubeconfig`: Path to your kubeconfig file (default: `~/.kube/config`; the file must exist).
-- `cluster_cert_issuer`: The Kubernetes cert-manager cluster issuer to use for certificate challenges.
+- **apps:apply:** Create or update infrastructure
+- **apps:destroy:** Create or update infrastructure
+- **apps:format:** Reformat your configuration in the standard style
+- **apps:init:** Prepare your working directory for other commands
+- **apps:plan:** Show changes required by the current configuration
+- **apps:scale-runners:** Scale Gitea action runners to the specified count (0-10)
+- **apps:secrets:** Show bootstrap/admin credentials for a specified app
+- **apps:setup-runners:** Run setup script on gitea runners
+- **apps:validate:** Check whether the configuration is valid
 
 ## AWS Integration
 
