@@ -43,3 +43,10 @@ output "argocd_admin_password" {
   value       = random_password.argocd_admin_password.result
   sensitive   = true
 }
+
+output "ollama_auth_header" {
+  description = "ollama auth header"
+  value       = random_password.gateway_api_key.result
+  sensitive   = true
+}
+
