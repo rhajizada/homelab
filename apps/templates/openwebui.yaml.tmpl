@@ -1,24 +1,7 @@
 ollama:
-  enabled: true
-  fullnameOverride: open-webui-ollama
-  ollama:
-    gpu:
-      enabled: true
-      type: nvidia
-      number: 1
-    models:
-      pull:
-        - nomic-embed-text
-  runtimeClassName: nvidia
-  persistentVolume:
-    enabled: true
-    accessModes:
-      - ReadWriteMany
-    storageClass: longhorn
-    size: ${ollama_size}
+  enabled: false
 
-nodeSelector:
-  nvidia.com/gpu.present: "true"
+ollamaUrls: ["${ollama_url}"]
 
 extraEnvVars:
   - name: ENV
@@ -101,7 +84,7 @@ websocket:
 redis-cluster:
   enabled: true
   replica:
-    replicaCount: 2
+    replicaCount: 1
 
 pipelines:
   enabled: true

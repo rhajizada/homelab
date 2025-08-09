@@ -2,23 +2,11 @@ locals {
   openwebui = {
     repository = "https://helm.openwebui.com"
     chart      = "open-webui"
-    version    = "6.1.0"
+    version    = "6.29.0"
     namespace  = "openwebui"
 
     host         = "chat.${var.base_domain}"
     storage_size = "16Gi"
-    ollama = {
-      volume_name  = "openwebui-ollama-pv"
-      storage_size = "128Gi"
-      models = [
-        "deepseek-r1:14b",
-        "gemma3:12b",
-        "llama3.1:8b",
-        "mistral",
-        "phi4:14b",
-        "qwen2.5-coder:14b",
-      ]
-    }
   }
   chromadb = {
     repository   = "https://infracloudio.github.io/charts"
@@ -30,9 +18,6 @@ locals {
     repository = "https://apache.jfrog.io/artifactory/tika"
     chart      = "tika"
     version    = "2.9.0"
-  }
-  playwright = {
-    version = "1.51.1"
   }
 }
 
@@ -131,7 +116,9 @@ resource "helm_release" "tika" {
 }
 
 resource "helm_release" "openwebui" {
+  # TODO: Fix regular users require admin approval on sign up and cannot login
   depends_on = [
+    kubernetes_service.ollama,
     kubernetes_namespace.openwebui_namespace,
     authentik_application.openwebui,
     kubernetes_secret.openwebui_secret,
@@ -153,60 +140,11 @@ resource "helm_release" "openwebui" {
     templatefile("${path.module}/templates/openwebui.yaml.tmpl", {
       host                 = local.openwebui.host
       cert_issuer          = var.cluster_cert_issuer
+      ollama_url           = "http://ollama.${local.ollama.namespace}.svc.cluster.local:11434"
       storage_size         = local.openwebui.storage_size
-      ollama_size          = local.openwebui.ollama.storage_size
       openid_provider_url  = "https://${local.authentik.host}/application/o/openwebui-slug/.well-known/openid-configuration"
       openid_provider_name = "authentik"
       openid_redirect_uri  = "https://${local.openwebui.host}/oauth/oidc/callback"
     })
   ]
 }
-
-
-resource "kubernetes_job" "ollama_init" {
-  depends_on = [
-    helm_release.openwebui
-  ]
-
-  for_each = { for model in local.openwebui.ollama.models : model => model }
-
-  metadata {
-    name      = "open-webui-ollama-init-${replace(replace(each.value, ".", "-"), ":", "-")}"
-    namespace = local.openwebui.namespace
-  }
-
-  spec {
-    # run exactly once, no retries
-    completions   = 1
-    parallelism   = 1
-    backoff_limit = 0
-
-    template {
-      metadata {
-        labels = {
-          job = "open-webui-ollama-init-${replace(replace(each.value, ".", "-"), ":", "-")}"
-        }
-      }
-
-      spec {
-
-        container {
-          name  = "ollama-init"
-          image = "alpine/curl"
-          command = [
-            "sh",
-            "-c",
-            "curl -s http://open-webui-ollama.openwebui.svc.cluster.local:11434/api/pull -d '{\"model\": \"${each.value}\"}'"
-          ]
-        }
-      }
-    }
-  }
-
-  timeouts {
-    create = "1h"
-    delete = "1h"
-  }
-}
-
-
