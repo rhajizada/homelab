@@ -2,7 +2,7 @@ locals {
   openwebui = {
     repository = "https://helm.openwebui.com"
     chart      = "open-webui"
-    version    = "6.29.0"
+    version    = "8.12.2"
     namespace  = "openwebui"
 
     host         = "chat.${var.base_domain}"
