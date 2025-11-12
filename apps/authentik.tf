@@ -8,10 +8,10 @@ locals {
     host = "authentik.${var.base_domain}"
     groups = {
       gitea   = ["git-users", "git-admins"],
-      minio   = ["minio-users", "minio-admins"],
       harbor  = ["harbor-admins"]
       grafana = ["grafana-editors", "grafana-admins"]
       argocd  = ["argocd-admins", "argocd-viewers"]
+      llamero = ["llamero-admins", "llamero-maintainers", "llamero-users"]
     }
   }
 }
@@ -191,74 +191,6 @@ resource "authentik_application" "gitea" {
 resource "authentik_group" "gitea_groups" {
   for_each = toset(local.authentik.groups.gitea)
   name     = each.value
-}
-
-resource "random_password" "minio_client_id" {
-  length  = 32
-  special = false
-}
-
-resource "random_password" "minio_client_secret" {
-  length  = 64
-  special = true
-}
-
-resource "authentik_property_mapping_provider_scope" "minio" {
-  depends_on = [helm_release.authentik]
-  name       = "authentik minio OAuth Mapping: OpenID 'minio'"
-  expression = <<EOF
-if ak_is_group_member(request.user, name="minio-admins"):
-  return {
-      "policy": "consoleAdmin",
-}
-elif ak_is_group_member(request.user, name="minio-users"):
-  return {
-      "policy": ["readwrite"]
-}
-else:
-  return {
-      "policy": ["readonly"]
-}
-EOF
-  scope_name = "minio"
-}
-
-resource "authentik_group" "minio_groups" {
-  for_each = toset(local.authentik.groups.minio)
-  name     = each.value
-}
-
-resource "authentik_provider_oauth2" "minio" {
-  depends_on = [
-    helm_release.authentik,
-    authentik_property_mapping_provider_scope.minio
-  ]
-  name               = "minio"
-  client_type        = "confidential"
-  client_id          = random_password.minio_client_id.result
-  client_secret      = random_password.minio_client_secret.result
-  authorization_flow = data.authentik_flow.default_authorization_flow.id
-  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
-  allowed_redirect_uris = [
-    {
-      matching_mode = "strict",
-      url           = "https://${local.minio.host}/oauth_callback",
-    }
-  ]
-  property_mappings = [
-    data.authentik_property_mapping_provider_scope.email.id,
-    data.authentik_property_mapping_provider_scope.profile.id,
-    data.authentik_property_mapping_provider_scope.openid.id,
-    authentik_property_mapping_provider_scope.minio.id
-  ]
-  signing_key = data.authentik_certificate_key_pair.generated.id
-}
-
-resource "authentik_application" "minio" {
-  name              = "MinIO"
-  slug              = "minio-slug"
-  protocol_provider = authentik_provider_oauth2.minio.id
-  meta_icon         = "https://simpleicons.org/icons/minio.svg"
 }
 
 resource "random_password" "harbor_client_id" {
