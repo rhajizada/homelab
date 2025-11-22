@@ -6,13 +6,6 @@ locals {
     namespace  = "authentik"
 
     host = "authentik.${var.base_domain}"
-    groups = {
-      gitea   = ["git-users", "git-admins"],
-      harbor  = ["harbor-admins"]
-      grafana = ["grafana-editors", "grafana-admins"]
-      argocd  = ["argocd-admins", "argocd-viewers"]
-      llamero = ["llamero-admins", "llamero-maintainers", "llamero-users"]
-    }
   }
 }
 
@@ -79,4 +72,64 @@ resource "helm_release" "authentik" {
       cert_issuer         = var.cluster_cert_issuer
     })
   ]
+}
+
+provider "authentik" {
+  url      = "https://${local.authentik.host}"
+  token    = random_password.authentik_bootstrap_token.result
+  insecure = true
+}
+
+data "authentik_flow" "default_authorization_flow" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  slug = "default-provider-authorization-implicit-consent"
+}
+
+data "authentik_flow" "default_invalidation_flow" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  slug = "default-provider-invalidation-flow"
+}
+
+data "authentik_property_mapping_provider_scope" "email" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name = "authentik default OAuth Mapping: OpenID 'email'"
+}
+
+data "authentik_property_mapping_provider_scope" "profile" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name = "authentik default OAuth Mapping: OpenID 'profile'"
+}
+
+data "authentik_property_mapping_provider_scope" "openid" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name = "authentik default OAuth Mapping: OpenID 'openid'"
+}
+
+data "authentik_certificate_key_pair" "generated" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name = "authentik Self-signed Certificate"
+}
+
+resource "authentik_property_mapping_provider_scope" "preferred_username" {
+  depends_on = [helm_release.authentik]
+  name       = "authentik preferred_username OAuth Mapping: OpenID 'preferred_username'"
+  expression = <<EOF
+    return { "preferred_username": request.user.attributes.get("username", "") }
+EOF
+  scope_name = "preferred_username"
+  lifecycle {
+    ignore_changes = [expression]
+  }
 }

@@ -37,6 +37,67 @@ resource "random_password" "openwebui_pipelines_key" {
   special = false
 }
 
+resource "random_password" "openwebui_client_id" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "openwebui_client_secret" {
+  length  = 64
+  special = true
+}
+
+resource "authentik_rbac_role" "openwebui_admin_role" {
+  name = "openwebui-admin"
+}
+
+resource "authentik_rbac_role" "openwebui_user_role" {
+  name = "openwebui-user"
+}
+
+resource "authentik_group" "openwebui_admin_group" {
+  depends_on = [authentik_rbac_role.openwebui_admin_role]
+  name       = "openwebui-admins"
+  roles      = [authentik_rbac_role.openwebui_admin_role.id]
+}
+
+resource "authentik_group" "openwebui_user_group" {
+  depends_on = [authentik_rbac_role.openwebui_user_role]
+  name       = "openwebui-users"
+  roles      = [authentik_rbac_role.openwebui_user_role.id]
+}
+
+resource "authentik_provider_oauth2" "openwebui" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name               = "openwebui"
+  client_type        = "confidential"
+  client_id          = random_password.openwebui_client_id.result
+  client_secret      = random_password.openwebui_client_secret.result
+  authorization_flow = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  allowed_redirect_uris = [
+    {
+      matching_mode = "strict",
+      url           = "https://${local.openwebui.host}/oauth/oidc/callback",
+    }
+  ]
+  property_mappings = [
+    data.authentik_property_mapping_provider_scope.email.id,
+    data.authentik_property_mapping_provider_scope.profile.id,
+    data.authentik_property_mapping_provider_scope.openid.id,
+  ]
+  signing_key = data.authentik_certificate_key_pair.generated.id
+}
+
+resource "authentik_application" "openwebui" {
+  name              = "Open WebUI"
+  slug              = "openwebui-slug"
+  protocol_provider = authentik_provider_oauth2.openwebui.id
+  meta_icon         = "https://simpleicons.org/icons/langchain.svg"
+}
+
 resource "kubernetes_secret" "openwebui_secret" {
   metadata {
     name      = "openwebui-secret"

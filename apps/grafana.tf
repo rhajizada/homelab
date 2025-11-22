@@ -8,7 +8,8 @@ locals {
     admin = {
       username = "admin"
     }
-    host = "grafana.${var.base_domain}"
+    host   = "grafana.${var.base_domain}"
+    groups = ["grafana-editors", "grafana-admins"]
   }
 }
 
@@ -21,6 +22,53 @@ resource "kubernetes_namespace" "grafana_namespace" {
 resource "random_password" "grafana_admin_password" {
   length  = 16
   special = false
+}
+
+
+resource "random_password" "grafana_client_id" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "grafana_client_secret" {
+  length  = 64
+  special = true
+}
+
+resource "authentik_group" "grafana_groups" {
+  for_each = toset(local.grafana.groups)
+  name     = each.value
+}
+
+resource "authentik_provider_oauth2" "grafana" {
+  depends_on = [
+    helm_release.authentik
+  ]
+  name               = "grafana"
+  client_type        = "confidential"
+  client_id          = random_password.grafana_client_id.result
+  client_secret      = random_password.grafana_client_secret.result
+  authorization_flow = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  allowed_redirect_uris = [
+    {
+      matching_mode = "strict",
+      url           = "https://${local.grafana.host}/login/generic_oauth",
+    }
+  ]
+  property_mappings = [
+    data.authentik_property_mapping_provider_scope.email.id,
+    data.authentik_property_mapping_provider_scope.profile.id,
+    data.authentik_property_mapping_provider_scope.openid.id,
+  ]
+  signing_key = data.authentik_certificate_key_pair.generated.id
+}
+
+resource "authentik_application" "grafana" {
+  name              = "Grafana"
+  slug              = "grafana-slug"
+  protocol_provider = authentik_provider_oauth2.grafana.id
+  meta_icon         = "https://simpleicons.org/icons/grafana.svg"
 }
 
 resource "kubernetes_secret" "grafana_admin_secret" {
