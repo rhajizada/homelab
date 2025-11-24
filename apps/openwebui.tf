@@ -201,7 +201,7 @@ resource "helm_release" "openwebui" {
     templatefile("${path.module}/templates/openwebui.yaml.tmpl", {
       host                 = local.openwebui.host
       cert_issuer          = var.cluster_cert_issuer
-      ollama_url           = "http://ollama.${local.ollama.namespace}.svc.cluster.local:11434"
+      ollama_url           = "http://ollama.${local.llamero.namespace}.svc.cluster.local:11434"
       storage_size         = local.openwebui.storage_size
       openid_provider_url  = "https://${local.authentik.host}/application/o/openwebui-slug/.well-known/openid-configuration"
       openid_provider_name = "authentik"

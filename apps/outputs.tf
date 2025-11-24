@@ -35,9 +35,12 @@ output "argocd_admin_password" {
   sensitive   = true
 }
 
-output "ollama_auth_header" {
-  description = "ollama auth header"
-  value       = random_password.gateway_api_key.result
-  sensitive   = true
-}
+output "llamero_oauth_credentials" {
+  description = "llamero OAuth app credentials"
+  value = {
+    client_id     = random_password.llamero_client_id.result
+    client_secret = random_password.llamero_client_secret.result
 
+  }
+  sensitive = true
+}
