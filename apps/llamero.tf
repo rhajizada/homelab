@@ -15,19 +15,19 @@ locals {
     }
 
     server = {
-      image = "ghcr.io/rhajizada/llamero/server:sha-8f04e2f"
+      image = "ghcr.io/rhajizada/llamero/server:sha-0ea83de"
     }
 
     worker = {
-      image = "ghcr.io/rhajizada/llamero/worker:sha-8f04e2f"
+      image = "ghcr.io/rhajizada/llamero/worker:sha-0ea83de"
     }
 
     scheduler = {
-      image = "ghcr.io/rhajizada/llamero/scheduler:sha-8f04e2f"
+      image = "ghcr.io/rhajizada/llamero/scheduler:sha-0ea83de"
     }
 
     ui = {
-      image = "ghcr.io/rhajizada/llamero/ui:sha-8f04e2f"
+      image = "ghcr.io/rhajizada/llamero/ui:sha-0ea83de"
     }
 
     ollama = {
@@ -87,7 +87,7 @@ resource "authentik_provider_oauth2" "llamero" {
     },
     {
       matching_mode = "strict"
-      url           = "https://localhost:8080/auth/callback"
+      url           = "http://localhost:8080/auth/callback"
     }
   ]
 
@@ -101,9 +101,10 @@ resource "authentik_provider_oauth2" "llamero" {
 }
 
 resource "authentik_application" "llamero" {
-  name              = "llamero"
+  name              = "Llamero"
   slug              = "llamero-slug"
   protocol_provider = authentik_provider_oauth2.llamero.id
+  meta_icon         = "https://simpleicons.org/icons/ollama.svg"
 }
 
 resource "tls_private_key" "llamero_jwt" {
@@ -191,31 +192,31 @@ backends:
   - id: ollama
     address: http://ollama.${local.llamero.namespace}.svc.cluster.local:11434
     tags:
-      - docker
+      - gpu
 EOF
   }
 }
 
 resource "kubernetes_stateful_set" "postgres" {
   metadata {
-    name      = "postgres"
+    name      = "llamero-postgres"
     namespace = local.llamero.namespace
   }
 
   spec {
-    service_name = "postgres"
+    service_name = "llamero-postgres"
     replicas     = 1
 
     selector {
       match_labels = {
-        app = "postgres"
+        app = "llamero-postgres"
       }
     }
 
     template {
       metadata {
         labels = {
-          app = "postgres"
+          app = "llamero-postgres"
         }
       }
 
@@ -278,13 +279,13 @@ resource "kubernetes_stateful_set" "postgres" {
 
 resource "kubernetes_service" "postgres" {
   metadata {
-    name      = "postgres"
+    name      = "llamero-postgres"
     namespace = local.llamero.namespace
   }
 
   spec {
     selector = {
-      app = "postgres"
+      app = "llamero-postgres"
     }
 
     port {
@@ -297,28 +298,32 @@ resource "kubernetes_service" "postgres" {
 
 resource "kubernetes_stateful_set" "redis" {
   metadata {
-    name      = "redis"
+    name      = "llamero-redis"
     namespace = local.llamero.namespace
   }
 
   spec {
-    service_name = "redis"
+    service_name = "llamero-redis"
     replicas     = 1
 
     selector {
       match_labels = {
-        app = "redis"
+        app = "llamero-redis"
       }
     }
 
     template {
       metadata {
         labels = {
-          app = "redis"
+          app = "llamero-redis"
         }
       }
 
       spec {
+        security_context {
+          fs_group = 999
+        }
+
         container {
           name  = "redis"
           image = local.llamero.redis.image
@@ -358,13 +363,13 @@ resource "kubernetes_stateful_set" "redis" {
 
 resource "kubernetes_service" "redis" {
   metadata {
-    name      = "redis"
+    name      = "llamero-redis"
     namespace = local.llamero.namespace
   }
 
   spec {
     selector = {
-      app = "redis"
+      app = "llamero-redis"
     }
 
     port {
@@ -437,7 +442,26 @@ resource "kubernetes_deployment" "llamero_server" {
             name  = "LLAMERO_SERVER_EXTERNAL_URL"
             value = "https://${local.llamero.host}"
           }
-
+          env {
+            name  = "LLAMERO_JWT_SIGNING_METHOD"
+            value = "EdDSA"
+          }
+          env {
+            name  = "LLAMERO_JWT_PRIVATE_KEY_PATH"
+            value = "/app/secrets/jwt_private.pem"
+          }
+          env {
+            name  = "LLAMERO_JWT_PUBLIC_KEY_PATH"
+            value = "/app/secrets/jwt_public.pem"
+          }
+          env {
+            name  = "LLAMERO_JWT_TTL"
+            value = "1h"
+          }
+          env {
+            name  = "LLAMERO_BACKENDS_FILE"
+            value = "/app/config/backends.yaml"
+          }
           env {
             name = "LLAMERO_OAUTH_CLIENT_ID"
             value_from {
@@ -456,33 +480,29 @@ resource "kubernetes_deployment" "llamero_server" {
               }
             }
           }
-
+          env {
+            name  = "LLAMERO_OAUTH_AUTHORIZE_URL"
+            value = "https://${local.authentik.host}/application/o/authorize/"
+          }
+          env {
+            name  = "LLAMERO_OAUTH_TOKEN_URL"
+            value = "https://${local.authentik.host}/application/o/token/"
+          }
+          env {
+            name  = "LLAMERO_OAUTH_USERINFO_URL"
+            value = "https://${local.authentik.host}/application/o/userinfo/"
+          }
+          env {
+            name  = "LLAMERO_OAUTH_REDIRECT_URL"
+            value = "https://${local.llamero.host}/auth/callback"
+          }
           env {
             name  = "LLAMERO_ROLE_GROUPS"
             value = "admin=llamero-admins;user=llamero-users"
           }
-
-
-          env {
-            name  = "LLAMERO_JWT_SIGNING_METHOD"
-            value = "EdDSA"
-          }
-          env {
-            name  = "LLAMERO_JWT_PRIVATE_KEY_PATH"
-            value = "/app/secrets/jwt_private.pem"
-          }
-          env {
-            name  = "LLAMERO_JWT_PUBLIC_KEY_PATH"
-            value = "/app/secrets/jwt_public.pem"
-          }
-          env {
-            name  = "LLAMERO_JWT_TTL"
-            value = "1h"
-          }
-
           env {
             name  = "LLAMERO_POSTGRES_HOST"
-            value = "postgres.${local.llamero.namespace}.svc.cluster.local"
+            value = "llamero-postgres.${local.llamero.namespace}.svc.cluster.local"
           }
           env {
             name  = "LLAMERO_POSTGRES_PORT"
@@ -512,7 +532,7 @@ resource "kubernetes_deployment" "llamero_server" {
 
           env {
             name  = "LLAMERO_REDIS_ADDR"
-            value = "redis.${local.llamero.namespace}.svc.cluster.local:6379"
+            value = "llamero-redis.${local.llamero.namespace}.svc.cluster.local:6379"
           }
           env {
             name = "LLAMERO_REDIS_PASSWORD"
@@ -522,40 +542,6 @@ resource "kubernetes_deployment" "llamero_server" {
                 key  = "LLAMERO_REDIS_PASSWORD"
               }
             }
-          }
-
-          env {
-            name  = "LLAMERO_BACKENDS_FILE"
-            value = "/app/config/backends.yaml"
-          }
-
-          env {
-            name  = "LLAMERO_WORKER_CONCURRENCY"
-            value = "5"
-          }
-          env {
-            name  = "LLAMERO_SCHEDULER_PING_SPEC"
-            value = "@every 5m"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_AUTHORIZE_URL"
-            value = "https://authentik.${var.base_domain}/application/o/authorize/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_TOKEN_URL"
-            value = "https://authentik.${var.base_domain}/application/o/token/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_USERINFO_URL"
-            value = "https://authentik.${var.base_domain}/application/o/userinfo/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_REDIRECT_URL"
-            value = "https://${local.llamero.host}/auth/callback"
           }
 
           volume_mount {
@@ -627,85 +613,13 @@ resource "kubernetes_deployment" "llamero_worker" {
       }
 
       spec {
-        volume {
-          name = "jwt-keys"
-          secret {
-            secret_name = kubernetes_secret.llamero_jwt_keys.metadata[0].name
-          }
-        }
-
-        volume {
-          name = "roles"
-          config_map {
-            name = kubernetes_config_map.llamero_roles.metadata[0].name
-          }
-        }
-
-        volume {
-          name = "backends"
-          config_map {
-            name = kubernetes_config_map.llamero_backends.metadata[0].name
-          }
-        }
-
         container {
           name  = "worker"
           image = local.llamero.worker.image
 
           env {
-            name  = "LLAMERO_SERVER_ADDRESS"
-            value = ":8080"
-          }
-          env {
-            name  = "LLAMERO_SERVER_EXTERNAL_URL"
-            value = "https://${local.llamero.host}"
-          }
-
-          env {
-            name = "LLAMERO_OAUTH_CLIENT_ID"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.llamero_app.metadata[0].name
-                key  = "LLAMERO_OAUTH_CLIENT_ID"
-              }
-            }
-          }
-
-          env {
-            name  = "LLAMERO_ROLE_GROUPS"
-            value = "admin=llamero-admins;user=llamero-users"
-          }
-
-          env {
-            name = "LLAMERO_OAUTH_CLIENT_SECRET"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.llamero_app.metadata[0].name
-                key  = "LLAMERO_OAUTH_CLIENT_SECRET"
-              }
-            }
-          }
-
-          env {
-            name  = "LLAMERO_JWT_SIGNING_METHOD"
-            value = "EdDSA"
-          }
-          env {
-            name  = "LLAMERO_JWT_PRIVATE_KEY_PATH"
-            value = "/app/secrets/jwt_private.pem"
-          }
-          env {
-            name  = "LLAMERO_JWT_PUBLIC_KEY_PATH"
-            value = "/app/secrets/jwt_public.pem"
-          }
-          env {
-            name  = "LLAMERO_JWT_TTL"
-            value = "1h"
-          }
-
-          env {
             name  = "LLAMERO_POSTGRES_HOST"
-            value = "postgres.${local.llamero.namespace}.svc.cluster.local"
+            value = "llamero-postgres.${local.llamero.namespace}.svc.cluster.local"
           }
           env {
             name  = "LLAMERO_POSTGRES_PORT"
@@ -735,7 +649,7 @@ resource "kubernetes_deployment" "llamero_worker" {
 
           env {
             name  = "LLAMERO_REDIS_ADDR"
-            value = "redis.${local.llamero.namespace}.svc.cluster.local:6379"
+            value = "llamero-redis.${local.llamero.namespace}.svc.cluster.local:6379"
           }
           env {
             name = "LLAMERO_REDIS_PASSWORD"
@@ -746,58 +660,9 @@ resource "kubernetes_deployment" "llamero_worker" {
               }
             }
           }
-
-          env {
-            name  = "LLAMERO_BACKENDS_FILE"
-            value = "/app/config/backends.yaml"
-          }
           env {
             name  = "LLAMERO_WORKER_CONCURRENCY"
             value = "5"
-          }
-          env {
-            name  = "LLAMERO_SCHEDULER_PING_SPEC"
-            value = "@every 5m"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_AUTHORIZE_URL"
-            value = "https://authentik.${var.base_domain}/application/o/authorize/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_TOKEN_URL"
-            value = "https://authentik.${var.base_domain}/application/o/token/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_USERINFO_URL"
-            value = "https://authentik.${var.base_domain}/application/o/userinfo/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_REDIRECT_URL"
-            value = "https://${local.llamero.host}/auth/callback"
-          }
-
-          volume_mount {
-            name       = "jwt-keys"
-            mount_path = "/app/secrets"
-            read_only  = true
-          }
-
-          volume_mount {
-            name       = "roles"
-            mount_path = "/app/config/roles.yaml"
-            sub_path   = "roles.yaml"
-            read_only  = true
-          }
-
-          volume_mount {
-            name       = "backends"
-            mount_path = "/app/config/backends.yaml"
-            sub_path   = "backends.yaml"
-            read_only  = true
           }
         }
       }
@@ -828,114 +693,12 @@ resource "kubernetes_deployment" "llamero_scheduler" {
       }
 
       spec {
-        volume {
-          name = "jwt-keys"
-          secret {
-            secret_name = kubernetes_secret.llamero_jwt_keys.metadata[0].name
-          }
-        }
-
-        volume {
-          name = "roles"
-          config_map {
-            name = kubernetes_config_map.llamero_roles.metadata[0].name
-          }
-        }
-
-        volume {
-          name = "backends"
-          config_map {
-            name = kubernetes_config_map.llamero_backends.metadata[0].name
-          }
-        }
-
         container {
           name  = "scheduler"
           image = local.llamero.scheduler.image
-
-          env {
-            name  = "LLAMERO_SERVER_ADDRESS"
-            value = ":8080"
-          }
-          env {
-            name  = "LLAMERO_SERVER_EXTERNAL_URL"
-            value = "https://${local.llamero.host}"
-          }
-
-          env {
-            name = "LLAMERO_OAUTH_CLIENT_ID"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.llamero_app.metadata[0].name
-                key  = "LLAMERO_OAUTH_CLIENT_ID"
-              }
-            }
-          }
-          env {
-            name = "LLAMERO_OAUTH_CLIENT_SECRET"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.llamero_app.metadata[0].name
-                key  = "LLAMERO_OAUTH_CLIENT_SECRET"
-              }
-            }
-          }
-
-          env {
-            name  = "LLAMERO_ROLE_GROUPS"
-            value = "admin=llamero-admins;user=llamero-users"
-          }
-
-          env {
-            name  = "LLAMERO_JWT_SIGNING_METHOD"
-            value = "EdDSA"
-          }
-          env {
-            name  = "LLAMERO_JWT_PRIVATE_KEY_PATH"
-            value = "/app/secrets/jwt_private.pem"
-          }
-          env {
-            name  = "LLAMERO_JWT_PUBLIC_KEY_PATH"
-            value = "/app/secrets/jwt_public.pem"
-          }
-          env {
-            name  = "LLAMERO_JWT_TTL"
-            value = "1h"
-          }
-
-          env {
-            name  = "LLAMERO_POSTGRES_HOST"
-            value = "postgres.${local.llamero.namespace}.svc.cluster.local"
-          }
-          env {
-            name  = "LLAMERO_POSTGRES_PORT"
-            value = "5432"
-          }
-          env {
-            name  = "LLAMERO_POSTGRES_USER"
-            value = "llamero"
-          }
-          env {
-            name = "LLAMERO_POSTGRES_PASSWORD"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.llamero_app.metadata[0].name
-                key  = "LLAMERO_POSTGRES_PASSWORD"
-              }
-            }
-          }
-          env {
-            name  = "LLAMERO_POSTGRES_DBNAME"
-            value = "llamero"
-          }
-          env {
-            name  = "LLAMERO_POSTGRES_SSLMODE"
-            value = "disable"
-          }
-
           env {
             name  = "LLAMERO_REDIS_ADDR"
-            value = "redis.${local.llamero.namespace}.svc.cluster.local:6379"
+            value = "llamero-redis.${local.llamero.namespace}.svc.cluster.local:6379"
           }
           env {
             name = "LLAMERO_REDIS_PASSWORD"
@@ -946,60 +709,9 @@ resource "kubernetes_deployment" "llamero_scheduler" {
               }
             }
           }
-
-          env {
-            name  = "LLAMERO_BACKENDS_FILE"
-            value = "/app/config/backends.yaml"
-          }
-
-          env {
-            name  = "LLAMERO_WORKER_CONCURRENCY"
-            value = "5"
-          }
           env {
             name  = "LLAMERO_SCHEDULER_PING_SPEC"
             value = "@every 5m"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_AUTHORIZE_URL"
-            value = "https://authentik.${var.base_domain}/application/o/authorize/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_TOKEN_URL"
-            value = "https://authentik.${var.base_domain}/application/o/token/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_USERINFO_URL"
-            value = "https://authentik.${var.base_domain}/application/o/userinfo/"
-          }
-
-          env {
-            name  = "LLAMERO_OAUTH_REDIRECT_URL"
-            value = "https://${local.llamero.host}/auth/callback"
-          }
-
-
-          volume_mount {
-            name       = "jwt-keys"
-            mount_path = "/app/secrets"
-            read_only  = true
-          }
-
-          volume_mount {
-            name       = "roles"
-            mount_path = "/app/config/roles.yaml"
-            sub_path   = "roles.yaml"
-            read_only  = true
-          }
-
-          volume_mount {
-            name       = "backends"
-            mount_path = "/app/config/backends.yaml"
-            sub_path   = "backends.yaml"
-            read_only  = true
           }
         }
       }
@@ -1300,4 +1012,3 @@ resource "kubernetes_ingress_v1" "llamero" {
     }
   }
 }
-
