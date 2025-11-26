@@ -94,7 +94,7 @@ resource "kubernetes_deployment" "vscode" {
           }
           volume_mount {
             name       = "workspace"
-            mount_path = "/home/workspace"
+            mount_path = "/home/workspace:cached"
           }
         }
         volume {
