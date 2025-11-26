@@ -21,7 +21,7 @@ terraform {
     }
     authentik = {
       source  = "goauthentik/authentik"
-      version = "2024.12.1"
+      version = "2025.10.1"
     }
     bcrypt = {
       source  = "viktorradnai/bcrypt"
