@@ -13,3 +13,12 @@ resource "proxmox_virtual_environment_download_file" "ubuntu_image" {
   file_name = local.image.file_name
   url       = local.image.url
 }
+
+resource "proxmox_virtual_environment_download_file" "ubuntu_image_storage" {
+  content_type = "iso"
+  datastore_id = "local"
+  node_name    = var.proxmox_storage_node
+
+  file_name = local.image.file_name
+  url       = local.image.url
+}

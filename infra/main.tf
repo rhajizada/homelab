@@ -7,6 +7,7 @@ locals {
   control_node_ips = [for i in range(var.talos_vm_config.control.count) : cidrhost(var.cluster_ip_range, 5 + i)]
   worker_node_ips  = [for i in range(var.talos_vm_config.worker.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + i)]
   gpu_node_ip      = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 1)
+  samba_node_ip    = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 2)
 }
 
 module "vpn" {
@@ -72,4 +73,19 @@ module "talos" {
   acme_server             = var.acme_server
 }
 
-
+module "samba" {
+  source                  = "./modules/samba"
+  cluster_name            = var.cluster_name
+  cluster_node_network    = var.cluster_node_network
+  cluster_network_gateway = var.cluster_network_gateway
+  environment             = var.environment
+  proxmox_endpoint        = var.proxmox_endpoint
+  proxmox_node_name       = var.proxmox_storage_node
+  ip_address              = local.samba_node_ip
+  vm_config               = var.samba_vm_config
+  ubuntu_image            = proxmox_virtual_environment_download_file.ubuntu_image_storage.id
+  guest_user              = var.samba_guest_user
+  admin_user              = var.samba_admin_user
+  storage_path            = var.samba_storage_path
+  samba_data_disk         = var.samba_data_disk
+}

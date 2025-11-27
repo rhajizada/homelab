@@ -13,6 +13,10 @@ variable "proxmox_secondary_node" {
   type        = string
 }
 
+variable "proxmox_storage_node" {
+  description = "Proxmox node used for storage services (e.g. Samba)"
+  type        = string
+}
 
 variable "base_domain" {
   description = "Base domain that will be serving the cluster"
@@ -154,7 +158,7 @@ variable "talos_gpu_vm_config" {
 variable "ubuntu_version" {
   description = "Version of Ubuntu to deploy for VPN VM"
   type        = string
-  default     = "24.10"
+  default     = "24.04"
 }
 
 variable "vpn_vm_config" {
@@ -241,3 +245,82 @@ variable "dns_vm_config" {
   }
 }
 
+variable "samba_vm_config" {
+  description = "Configuration for Samba VM"
+  type = object({
+    cpu = number
+    disk = object({
+      datastore_id = string
+      interface    = string
+      iothread     = bool
+      ssd          = bool
+      discard      = string
+      size         = number
+      file_format  = string
+    })
+    efi_disk = object({
+      datastore_id = string
+      file_format  = string
+      type         = string
+    })
+    memory  = number
+    network = string
+  })
+  default = {
+    cpu = 2
+    disk = {
+      datastore_id = "local-lvm"
+      interface    = "scsi0"
+      iothread     = true
+      ssd          = true
+      discard      = "on"
+      size         = 32
+      file_format  = "raw"
+    }
+    efi_disk = {
+      datastore_id = "local"
+      file_format  = "raw"
+      type         = "4m"
+    }
+    memory  = 4096
+    network = "vmbr0"
+  }
+}
+
+variable "samba_guest_user" {
+  description = "Samba guest user"
+  type        = string
+  default     = "guest"
+}
+
+variable "samba_admin_user" {
+  description = "Samba admin user"
+  type        = string
+  default     = "admin"
+}
+
+variable "samba_storage_path" {
+  description = "Filesystem path exported by Samba"
+  type        = string
+  default     = "/srv/storage"
+}
+
+variable "samba_data_disk" {
+  description = "Data disk configuration for Samba storage"
+  type = object({
+    datastore_id = string
+    size         = number
+    interface    = string
+    ssd          = bool
+    discard      = string
+    file_format  = string
+  })
+  default = {
+    datastore_id = "local-lvm"
+    size         = 256
+    interface    = "scsi1"
+    ssd          = true
+    discard      = "on"
+    file_format  = "raw"
+  }
+}
