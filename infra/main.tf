@@ -8,6 +8,10 @@ locals {
   worker_node_ips  = [for i in range(var.talos_vm_config.worker.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + i)]
   gpu_node_ip      = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 1)
   samba_node_ip    = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 2)
+  dns_subzone_records = merge(
+    { samba = local.samba_node_ip },
+    var.dns_subzone_records
+  )
 }
 
 module "vpn" {
@@ -34,6 +38,7 @@ module "dns" {
   proxmox_node_name       = var.proxmox_secondary_node
   ip_address              = local.dns_ip
   base_domain             = var.base_domain
+  subzone_records         = local.dns_subzone_records
   aws_region              = module.route53.aws_region
   aws_route53_zone_id     = module.route53.route_53_zone_id
   aws_iam_credentials     = module.route53.coredns_iam_user

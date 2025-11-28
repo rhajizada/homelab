@@ -29,6 +29,17 @@ variable "base_domain" {
   }
 }
 
+variable "dns_subzone_records" {
+  description = "Map of DNS subzones to IPv4 addresses for explicit A records"
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition     = alltrue([for ip in values(var.dns_subzone_records) : can(cidrhost("${ip}/32", 0))])
+    error_message = "All dns_subzone_records values must be valid IPv4 addresses"
+  }
+}
+
 
 variable "acme_email" {
   description = "Email to use for ACME registration"

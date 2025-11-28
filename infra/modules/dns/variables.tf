@@ -46,6 +46,17 @@ variable "base_domain" {
   }
 }
 
+variable "subzone_records" {
+  description = "Map of subzones to IPv4 addresses for explicit A records"
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition     = alltrue([for ip in values(var.subzone_records) : can(cidrhost("${ip}/32", 0))])
+    error_message = "All subzone_records values must be valid IPv4 addresses"
+  }
+}
+
 variable "aws_region" {
   description = "AWS region"
   type        = string
