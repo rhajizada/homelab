@@ -5,11 +5,12 @@ locals {
   }
 
   smb_conf = templatefile("${path.module}/templates/smb.conf.tmpl", {
-    guest_user   = var.guest_user
-    admin_user   = var.admin_user
-    storage_path = var.storage_path
+    guest_user        = var.guest_user
+    admin_user        = var.admin_user
+    storage_path      = var.storage_path
+    samba_directories = var.samba_directories
   })
-
+  samba_share_paths = join(" ", [for share in var.samba_directories : "${trimsuffix(var.storage_path, "/")}/${share.name}"])
 }
 
 resource "tls_private_key" "root_ssh" {
@@ -58,6 +59,7 @@ resource "proxmox_virtual_environment_file" "samba_user_data" {
         - mkdir -p ${var.storage_path}
         - echo "/dev/sdb ${var.storage_path} ext4 defaults 0 0" >> /etc/fstab
         - mount -a
+        - mkdir -p ${local.samba_share_paths}
         - systemctl daemon-reload
         - printf 'Dpkg::Options {\n  "--force-confdef";\n  "--force-confold";\n};\n' > /etc/apt/apt.conf.d/90force-conf
         - DEBIAN_FRONTEND=noninteractive apt-get update

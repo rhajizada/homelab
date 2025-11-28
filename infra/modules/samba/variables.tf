@@ -95,7 +95,7 @@ variable "admin_user" {
 variable "storage_path" {
   description = "Filesystem path exported by Samba"
   type        = string
-  default     = "/srv/storage"
+  default     = "/mnt"
 }
 
 variable "samba_data_disk" {
@@ -116,4 +116,22 @@ variable "samba_data_disk" {
     discard      = "on"
     file_format  = "raw"
   }
+}
+
+variable "samba_directories" {
+  description = "Directories to expose via Samba under the storage path"
+  type = list(object({
+    name   = string
+    public = bool
+  }))
+  default = [
+    {
+      name   = "public"
+      public = true
+    },
+    {
+      name   = "private"
+      public = false
+    }
+  ]
 }

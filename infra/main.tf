@@ -92,5 +92,6 @@ module "samba" {
   guest_user              = var.samba_guest_user
   admin_user              = var.samba_admin_user
   storage_path            = var.samba_storage_path
+  samba_directories       = var.samba_directories
   samba_data_disk         = var.samba_data_disk
 }

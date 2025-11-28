@@ -17,17 +17,19 @@
   host msdfs = no
   usershare max shares = 0
 
-[storage]
-  path = ${storage_path}
+%{ for share in samba_directories ~}
+[${share.name}]
+  path = ${storage_path}/${share.name}
   browseable = yes
-
-  guest ok = yes
-  read only = yes
+  guest ok = %{ if share.public }yes%{ else }no%{ endif }
+  read only = %{ if share.public }yes%{ else }no%{ endif }
   write list = ${admin_user}, @${admin_user}
-
+%{ if !share.public }
+  valid users = ${admin_user}, @${admin_user}
+%{ endif }
   force user = ${admin_user}
   force group = ${admin_user}
-
   create mask = 0664
   directory mask = 0775
 
+%{ endfor ~}
