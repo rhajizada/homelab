@@ -4,6 +4,16 @@ locals {
     host         = "code.${var.base_domain}"
     image        = "gitpod/openvscode-server:1.105.1"
     storage_size = "32Gi"
+    resources = {
+      requests = {
+        cpu    = "500m"
+        memory = "512Mi"
+      }
+      limits = {
+        cpu    = "1"
+        memory = "1Gi"
+      }
+    }
   }
 }
 
@@ -90,7 +100,30 @@ resource "kubernetes_deployment" "vscode" {
           image = local.vscode.image
           args  = ["--host=0.0.0.0", "--port=3000"]
           port {
+            name           = "http"
             container_port = 3000
+          }
+          resources {
+            limits   = local.vscode.resources.limits
+            requests = local.vscode.resources.requests
+          }
+          liveness_probe {
+            http_get {
+              path = "/"
+              port = "http"
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 20
+            timeout_seconds       = 5
+          }
+          readiness_probe {
+            http_get {
+              path = "/"
+              port = "http"
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 15
+            timeout_seconds       = 3
           }
           volume_mount {
             name       = "workspace"

@@ -15,19 +15,59 @@ locals {
     }
 
     server = {
-      image = "ghcr.io/rhajizada/llamero/server:sha-0ea83de"
+      image = "ghcr.io/rhajizada/llamero/server:v0.1.0"
+      resources = {
+        requests = {
+          cpu    = "200m"
+          memory = "256Mi"
+        }
+        limits = {
+          cpu    = "750m"
+          memory = "512Mi"
+        }
+      }
     }
 
     worker = {
-      image = "ghcr.io/rhajizada/llamero/worker:sha-0ea83de"
+      image = "ghcr.io/rhajizada/llamero/worker:v0.1.0"
+      resources = {
+        requests = {
+          cpu    = "100m"
+          memory = "128Mi"
+        }
+        limits = {
+          cpu    = "500m"
+          memory = "256Mi"
+        }
+      }
     }
 
     scheduler = {
-      image = "ghcr.io/rhajizada/llamero/scheduler:sha-0ea83de"
+      image = "ghcr.io/rhajizada/llamero/scheduler:v0.1.0"
+      resources = {
+        requests = {
+          cpu    = "50m"
+          memory = "64Mi"
+        }
+        limits = {
+          cpu    = "250m"
+          memory = "128Mi"
+        }
+      }
     }
 
     ui = {
       image = "ghcr.io/rhajizada/llamero/ui:sha-0ea83de"
+      resources = {
+        requests = {
+          cpu    = "250m"
+          memory = "375Mi"
+        }
+        limits = {
+          cpu    = "500m"
+          memory = "750Mi"
+        }
+      }
     }
 
     ollama = {
@@ -429,6 +469,11 @@ resource "kubernetes_deployment" "llamero_server" {
           name  = "server"
           image = local.llamero.server.image
 
+          resources {
+            limits   = local.llamero.server.resources.limits
+            requests = local.llamero.server.resources.requests
+          }
+
           port {
             name           = "http"
             container_port = 8080
@@ -563,6 +608,26 @@ resource "kubernetes_deployment" "llamero_server" {
             sub_path   = "backends.yaml"
             read_only  = true
           }
+
+          liveness_probe {
+            http_get {
+              path = "/healthz"
+              port = "http"
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 10
+            timeout_seconds       = 2
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/healthz"
+              port = "http"
+            }
+            initial_delay_seconds = 3
+            period_seconds        = 10
+            timeout_seconds       = 2
+          }
         }
       }
     }
@@ -616,6 +681,11 @@ resource "kubernetes_deployment" "llamero_worker" {
         container {
           name  = "worker"
           image = local.llamero.worker.image
+
+          resources {
+            limits   = local.llamero.worker.resources.limits
+            requests = local.llamero.worker.resources.requests
+          }
 
           env {
             name  = "LLAMERO_POSTGRES_HOST"
@@ -696,6 +766,12 @@ resource "kubernetes_deployment" "llamero_scheduler" {
         container {
           name  = "scheduler"
           image = local.llamero.scheduler.image
+
+          resources {
+            limits   = local.llamero.scheduler.resources.limits
+            requests = local.llamero.scheduler.resources.requests
+          }
+
           env {
             name  = "LLAMERO_REDIS_ADDR"
             value = "llamero-redis.${local.llamero.namespace}.svc.cluster.local:6379"
@@ -746,6 +822,11 @@ resource "kubernetes_deployment" "llamero_ui" {
         container {
           name  = "ui"
           image = local.llamero.ui.image
+
+          resources {
+            limits   = local.llamero.ui.resources.limits
+            requests = local.llamero.ui.resources.requests
+          }
 
           env {
             name  = "NEXT_TELEMETRY_DISABLED"
