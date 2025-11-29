@@ -54,6 +54,18 @@ resource "proxmox_virtual_environment_file" "samba_user_data" {
             ${indent(6, local.smb_conf)}
           path: /etc/samba/smb.conf
           permissions: '0644'
+        - content: |
+            <?xml version="1.0" standalone='no'?>
+            <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+            <service-group>
+              <name replace-wildcards="yes">%h</name>
+              <service>
+                <type>_smb._tcp</type>
+                <port>445</port>
+              </service>
+            </service-group>
+          path: /etc/avahi/services/samba.service
+          permissions: '0644'
       runcmd:
         - mkfs.ext4 /dev/sdb
         - mkdir -p ${var.storage_path}
@@ -64,7 +76,7 @@ resource "proxmox_virtual_environment_file" "samba_user_data" {
         - printf 'Dpkg::Options {\n  "--force-confdef";\n  "--force-confold";\n};\n' > /etc/apt/apt.conf.d/90force-conf
         - DEBIAN_FRONTEND=noninteractive apt-get update
         - DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade
-        - DEBIAN_FRONTEND=noninteractive apt-get install -y qemu-guest-agent samba
+        - DEBIAN_FRONTEND=noninteractive apt-get install -y qemu-guest-agent samba avahi-daemon
         - groupadd -f ${var.admin_user}
         - useradd -M -s /usr/sbin/nologin -g ${var.admin_user} ${var.admin_user}
         - |
@@ -79,6 +91,8 @@ resource "proxmox_virtual_environment_file" "samba_user_data" {
         - systemctl start qemu-guest-agent
         - systemctl enable smbd
         - systemctl start smbd
+        - systemctl enable avahi-daemon
+        - systemctl restart avahi-daemon
         - echo "done" > /tmp/cloud-config.done
       EOF
 
