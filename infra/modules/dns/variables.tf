@@ -19,12 +19,6 @@ variable "cluster_network_gateway" {
   default     = "192.168.1.1"
 }
 
-variable "cluster_node_network" {
-  description = "The IP network of the cluster nodes"
-  type        = string
-  default     = "192.168.1.1/24"
-}
-
 variable "environment" {
   description = "Environment name (e.g dev/staging/prod)"
   type        = string

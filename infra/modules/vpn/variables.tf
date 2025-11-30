@@ -19,11 +19,6 @@ variable "cluster_network_gateway" {
   type        = string
 }
 
-variable "cluster_node_network" {
-  description = "The IP network of the cluster nodes"
-  type        = string
-}
-
 variable "environment" {
   description = "Environment name (e.g dev/staging/prod)"
   type        = string

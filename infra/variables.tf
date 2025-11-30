@@ -167,9 +167,15 @@ variable "talos_gpu_vm_config" {
 }
 
 variable "ubuntu_version" {
-  description = "Version of Ubuntu to deploy for VPN VM"
+  description = "Version of Ubuntu to deploy for VPN/DNS/Samba VMs"
   type        = string
   default     = "24.04"
+}
+
+variable "arch_version" {
+  description = "Version of Arch Linux to deploy for Devbox VM"
+  type        = string
+  default     = "latest"
 }
 
 variable "vpn_vm_config" {
@@ -330,6 +336,10 @@ variable "samba_directories" {
     {
       name   = "private"
       public = false
+    },
+    {
+      name   = "backups"
+      public = false
     }
   ]
 }
@@ -345,11 +355,59 @@ variable "samba_data_disk" {
     file_format  = string
   })
   default = {
-    datastore_id = "local-lvm"
-    size         = 256
+    datastore_id = "data-lvm"
+    size         = 4000
     interface    = "scsi1"
     ssd          = true
     discard      = "on"
     file_format  = "raw"
   }
+}
+
+variable "devbox_vm_config" {
+  description = "Configuration for Dev VM"
+  type = object({
+    cpu = number
+    disk = object({
+      datastore_id = string
+      interface    = string
+      iothread     = bool
+      ssd          = bool
+      discard      = string
+      size         = number
+      file_format  = string
+    })
+    efi_disk = object({
+      datastore_id = string
+      file_format  = string
+      type         = string
+    })
+    memory  = number
+    network = string
+  })
+  default = {
+    cpu = 2
+    disk = {
+      datastore_id = "data-lvm"
+      interface    = "scsi0"
+      iothread     = true
+      ssd          = true
+      discard      = "on"
+      size         = 120
+      file_format  = "raw"
+    }
+    efi_disk = {
+      datastore_id = "local"
+      file_format  = "raw"
+      type         = "4m"
+    }
+    memory  = 4096
+    network = "vmbr0"
+  }
+}
+
+variable "devbox_admin_user" {
+  description = "Devbox admin user"
+  type        = string
+  default     = "admin"
 }

@@ -87,12 +87,9 @@ resource "proxmox_virtual_environment_file" "samba_user_data" {
           fi
         - chown -R ${var.admin_user}:${var.admin_user} ${var.storage_path}
         - chmod -R 0775 ${var.storage_path}
-        - systemctl enable qemu-guest-agent
-        - systemctl start qemu-guest-agent
-        - systemctl enable smbd
-        - systemctl start smbd
-        - systemctl enable avahi-daemon
-        - systemctl restart avahi-daemon
+        - systemctl enable --now qemu-guest-agent
+        - systemctl enable --now smbd
+        - systemctl enable --now avahi-daemon
         - echo "done" > /tmp/cloud-config.done
       EOF
 

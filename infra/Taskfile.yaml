@@ -96,8 +96,8 @@ tasks:
       connect: "{{.connect | default false}}"
       ssh_key: "{{.SSH_DIR}}/{{.node}}.rsa"
     preconditions:
-      - sh: '[ "{{.node}}" = "vpn" ] || [ "{{.node}}" = "dns" ] || [ "{{.node}}" = "samba" ]'
-        msg: "invalid node '{{.node}}'; allowed values: 'vpn', 'dns', or 'samba'"
+      - sh: '[ "{{.node}}" = "vpn" ] || [ "{{.node}}" = "dns" ] || [ "{{.node}}" = "samba" || [ "{{.node}}" = "devbox" ]'
+        msg: "invalid node '{{.node}}'; allowed values: 'vpn', 'dns', 'samba' or 'devbox'"
       - sh: '{{.TF}} state list | grep -q "module.{{.node}}"'
         msg: "terraform state for node not found, apply configuration first"
     requires:

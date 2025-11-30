@@ -8,6 +8,7 @@ locals {
   worker_node_ips  = [for i in range(var.talos_vm_config.worker.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + i)]
   gpu_node_ip      = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 1)
   samba_node_ip    = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 2)
+  devbox_node_ip   = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 3)
   dns_subzone_records = merge(
     { samba = local.samba_node_ip },
     var.dns_subzone_records
@@ -17,7 +18,6 @@ locals {
 module "vpn" {
   source                  = "./modules/vpn"
   cluster_name            = var.cluster_name
-  cluster_node_network    = var.cluster_node_network
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
@@ -31,7 +31,6 @@ module "vpn" {
 module "dns" {
   source                  = "./modules/dns"
   cluster_name            = var.cluster_name
-  cluster_node_network    = var.cluster_node_network
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
@@ -58,7 +57,6 @@ module "route53" {
 module "talos" {
   source                  = "./modules/talos"
   cluster_name            = var.cluster_name
-  cluster_node_network    = var.cluster_node_network
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
@@ -81,7 +79,6 @@ module "talos" {
 module "samba" {
   source                  = "./modules/samba"
   cluster_name            = var.cluster_name
-  cluster_node_network    = var.cluster_node_network
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
@@ -94,4 +91,17 @@ module "samba" {
   storage_path            = var.samba_storage_path
   samba_directories       = var.samba_directories
   samba_data_disk         = var.samba_data_disk
+}
+
+module "devbox" {
+  source                  = "./modules/devbox"
+  cluster_name            = var.cluster_name
+  cluster_network_gateway = var.cluster_network_gateway
+  environment             = var.environment
+  proxmox_endpoint        = var.proxmox_endpoint
+  proxmox_node_name       = var.proxmox_secondary_node
+  ip_address              = local.devbox_node_ip
+  vm_config               = var.devbox_vm_config
+  arch_image              = proxmox_virtual_environment_download_file.arch_image.id
+  admin_user              = var.devbox_admin_user
 }

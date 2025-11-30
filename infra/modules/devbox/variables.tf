@@ -23,18 +23,18 @@ variable "environment" {
   type        = string
 }
 
-variable "ubuntu_image" {
-  description = "Ubuntu Cloud Image ID"
+variable "arch_image" {
+  description = "Arch Linux Image ID"
   type        = string
 }
 
 variable "ip_address" {
-  description = "IP address of Samba VM"
+  description = "IP address of devbox VM"
   type        = string
 }
 
 variable "vm_config" {
-  description = "Configuration for Samba VM"
+  description = "Configuration for devbox VM"
   type = object({
     cpu = number
     disk = object({
@@ -75,58 +75,9 @@ variable "vm_config" {
   }
 }
 
-variable "guest_user" {
-  description = "Samba guest user"
-  type        = string
-  default     = "guest"
-}
-
 variable "admin_user" {
-  description = "Samba admin user"
+  description = "devbox admin user"
   type        = string
   default     = "admin"
 }
 
-variable "storage_path" {
-  description = "Filesystem path exported by Samba"
-  type        = string
-  default     = "/mnt"
-}
-
-variable "samba_data_disk" {
-  description = "Data disk configuration for Samba storage"
-  type = object({
-    datastore_id = string
-    size         = number
-    interface    = string
-    ssd          = bool
-    discard      = string
-    file_format  = string
-  })
-  default = {
-    datastore_id = "local-lvm"
-    size         = 256
-    interface    = "scsi1"
-    ssd          = true
-    discard      = "on"
-    file_format  = "raw"
-  }
-}
-
-variable "samba_directories" {
-  description = "Directories to expose via Samba under the storage path"
-  type = list(object({
-    name   = string
-    public = bool
-  }))
-  default = [
-    {
-      name   = "public"
-      public = true
-    },
-    {
-      name   = "private"
-      public = false
-    }
-  ]
-}

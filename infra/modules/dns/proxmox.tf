@@ -84,11 +84,9 @@ resource "proxmox_virtual_environment_file" "dns_user_data" {
         - mv coredns /usr/bin/
         - cd --
         - systemctl daemon-reload
-        - systemctl enable qemu-guest-agent
-        - systemctl start qemu-guest-agent
+        - systemctl enable --now qemu-guest-agent
         - systemctl restart systemd-resolved
-        - systemctl enable coredns
-        - systemctl start coredns
+        - systemctl enable --now coredns
         - echo "done" > /tmp/cloud-config.done
     EOF
 
