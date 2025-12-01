@@ -49,15 +49,17 @@ extraEnvVars:
     value: "${openid_redirect_uri}"
   - name: TIKA_SERVER_URL
     value: "http://open-webui-tika.openwebui.svc.cluster.local:9998"
-  - name: ENABLE_RAG_WEB_SEARCH
+  - name: ENABLE_DIRECT_CONNECTIONS
+    value: "true"
+  - name: ENABLE_WEB_SEARCH
     value: "true"
   - name: ENABLE_SEARCH_QUERY_GENERATION
     value: "true"
-  - name: RAG_WEB_SEARCH_RESULT_COUNT
-    value: "3"
-  - name: RAG_WEB_SEARCH_ENGINE
-    value: "duckduckgo"
-  - name: RAG_WEB_LOADER_ENGINE
+  - name: WEB_SEARCH_RESULT_COUNT
+    value: "5"
+  - name: WEB_SEARCH_ENGINE
+    value: "ddgs"
+  - name: WEB_LOADER_ENGINE
     value: "playwright"
   - name: RAG_OLLAMA_BASE_URL
     value: "http://open-webui-ollama.openwebui.svc.cluster.local:11434"
