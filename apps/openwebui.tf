@@ -2,7 +2,7 @@ locals {
   openwebui = {
     repository = "https://helm.openwebui.com"
     chart      = "open-webui"
-    version    = "8.12.2"
+    version    = "8.18.0"
     namespace  = "openwebui"
 
     host         = "chat.${var.base_domain}"
@@ -47,29 +47,17 @@ resource "random_password" "openwebui_client_secret" {
   special = true
 }
 
-resource "authentik_rbac_role" "openwebui_admin_role" {
-  name = "openwebui-admin"
-}
-
-resource "authentik_rbac_role" "openwebui_user_role" {
-  name = "openwebui-user"
-}
-
 resource "authentik_group" "openwebui_admin_group" {
-  depends_on = [authentik_rbac_role.openwebui_admin_role]
-  name       = "openwebui-admins"
-  roles      = [authentik_rbac_role.openwebui_admin_role.id]
+  name = "openwebui-admins"
 }
 
 resource "authentik_group" "openwebui_user_group" {
-  depends_on = [authentik_rbac_role.openwebui_user_role]
-  name       = "openwebui-users"
-  roles      = [authentik_rbac_role.openwebui_user_role.id]
+  name = "openwebui-users"
 }
 
 resource "authentik_provider_oauth2" "openwebui" {
   depends_on = [
-    helm_release.authentik
+    helm_release.authentik,
   ]
   name               = "openwebui"
   client_type        = "confidential"

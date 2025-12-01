@@ -19,13 +19,17 @@ extraEnvVars:
     value: "false"
   - name: ENABLE_LOGIN_FORM
     value: "false"
+  - name: ENABLE_PASSWORD_AUTH
+    value: "false"
   - name: ENABLE_OAUTH_SIGNUP
     value: "true"
   - name: ENABLE_OAUTH_ROLE_MANAGEMENT
     value: "true"
-  - name: OAUTH_ALLOWED_ROLES
+  - name: "OAUTH_ALLOWED_ROLES"
     value: "openwebui-users,openwebui-admins"
-  - name: OAUTH_ADMIN_ROLES
+  - name: "OAUTH_ROLES_CLAIM"
+    value: "groups"
+  - name: "OAUTH_ADMIN_ROLES"
     value: "openwebui-admins"
   - name: OAUTH_CLIENT_ID
     valueFrom:
