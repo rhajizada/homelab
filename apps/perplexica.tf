@@ -223,70 +223,85 @@ resource "kubernetes_manifest" "perplexica_forward_auth" {
   }
 }
 
-resource "kubernetes_manifest" "perplexica_ingressroute" {
+resource "kubernetes_ingress_v1" "perplexica" {
   depends_on = [kubernetes_manifest.perplexica_forward_auth]
 
-  manifest = {
-    apiVersion = "traefik.io/v1alpha1"
-    kind       = "IngressRoute"
-    metadata = {
-      name      = "perplexica"
-      namespace = local.perplexica.namespace
+  metadata {
+    name      = "perplexica"
+    namespace = local.perplexica.namespace
+    annotations = {
+      "traefik.ingress.kubernetes.io/router.entrypoints" = "websecure"
+      "traefik.ingress.kubernetes.io/router.tls"         = "true"
+      "traefik.ingress.kubernetes.io/router.middlewares" = "${local.perplexica.namespace}-${kubernetes_manifest.perplexica_forward_auth.manifest.metadata.name}@kubernetescrd"
+      "cert-manager.io/cluster-issuer"                   = var.cluster_cert_issuer
     }
-    spec = {
-      entryPoints = ["websecure"]
-      routes = [
-        {
-          kind     = "Rule"
-          match    = "Host(`${local.perplexica.host}`)"
-          priority = 10
-          services = [
-            {
+  }
+
+  spec {
+    ingress_class_name = "traefik"
+
+    rule {
+      host = local.perplexica.host
+
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
               name = kubernetes_service.perplexica.metadata[0].name
-              port = 3000
+              port {
+                number = 3000
+              }
             }
-          ]
-          middlewares = [
-            {
-              name      = kubernetes_manifest.perplexica_forward_auth.manifest.metadata.name
-              namespace = local.perplexica.namespace
-            }
-          ]
+          }
         }
-      ]
-      tls = {
-        secretName = "perplexica-tls"
       }
+    }
+
+    tls {
+      secret_name = "perplexica-tls"
+      hosts       = [local.perplexica.host]
     }
   }
 }
 
-resource "kubernetes_manifest" "perplexica_outpost_ingressroute" {
-  manifest = {
-    apiVersion = "traefik.io/v1alpha1"
-    kind       = "IngressRoute"
-    metadata = {
-      name      = "perplexica-outpost"
-      namespace = local.perplexica.namespace
+resource "kubernetes_ingress_v1" "perplexica_outpost" {
+  metadata {
+    name      = "perplexica-outpost"
+    namespace = local.perplexica.namespace
+    annotations = {
+      "traefik.ingress.kubernetes.io/router.entrypoints" = "websecure"
+      "traefik.ingress.kubernetes.io/router.tls"         = "true"
+      "cert-manager.io/cluster-issuer"                   = var.cluster_cert_issuer
     }
-    spec = {
-      entryPoints = ["websecure"]
-      routes = [
-        {
-          kind     = "Rule"
-          match    = "Host(`${local.perplexica.host}`) && PathPrefix(`/outpost.goauthentik.io/`)"
-          priority = 15
-          services = [
-            {
+  }
+
+  spec {
+    ingress_class_name = "traefik"
+
+    rule {
+      host = local.perplexica.host
+
+      http {
+        path {
+          path      = "/outpost.goauthentik.io/"
+          path_type = "Prefix"
+          backend {
+            service {
               name = kubernetes_service.perplexica_outpost.metadata[0].name
-              port = 9000
+              port {
+                number = 9000
+              }
             }
-          ]
+          }
         }
-      ]
-      tls = {
-        secretName = "perplexica-tls"
       }
+    }
+
+    tls {
+      secret_name = "perplexica-tls"
+      hosts       = [local.perplexica.host]
     }
   }
 }
