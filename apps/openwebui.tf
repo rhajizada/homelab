@@ -48,23 +48,27 @@ resource "random_password" "openwebui_client_secret" {
 }
 
 resource "authentik_group" "openwebui_admin_group" {
-  name = "openwebui-admins"
+  depends_on = [helm_release.authentik]
+  name       = "openwebui-admins"
 }
 
 resource "authentik_group" "openwebui_user_group" {
-  name = "openwebui-users"
+  depends_on = [helm_release.authentik]
+  name       = "openwebui-users"
 }
 
 resource "authentik_provider_oauth2" "openwebui" {
   depends_on = [
     helm_release.authentik,
   ]
-  name               = "openwebui"
-  client_type        = "confidential"
-  client_id          = random_password.openwebui_client_id.result
-  client_secret      = random_password.openwebui_client_secret.result
-  authorization_flow = data.authentik_flow.default_authorization_flow.id
-  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  name                    = "openwebui"
+  client_type             = "confidential"
+  client_id               = random_password.openwebui_client_id.result
+  client_secret           = random_password.openwebui_client_secret.result
+  authorization_flow      = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow       = data.authentik_flow.default_invalidation_flow.id
+  logout_method           = "backchannel"
+  refresh_token_threshold = "seconds=0"
   allowed_redirect_uris = [
     {
       matching_mode = "strict",

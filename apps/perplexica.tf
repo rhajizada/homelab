@@ -21,6 +21,7 @@ locals {
 }
 
 resource "authentik_provider_proxy" "perplexica" {
+  depends_on         = [helm_release.authentik]
   name               = "perplexica"
   external_host      = "https://${local.perplexica.host}"
   authorization_flow = data.authentik_flow.default_authorization_flow.id
@@ -36,7 +37,8 @@ resource "authentik_application" "perplexica" {
 }
 
 resource "authentik_group" "perplexica_users" {
-  name = "perplexica-users"
+  depends_on = [helm_release.authentik]
+  name       = "perplexica-users"
 }
 
 resource "authentik_policy_binding" "perplexica_access" {

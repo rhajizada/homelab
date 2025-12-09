@@ -18,11 +18,13 @@ locals {
 }
 
 resource "authentik_provider_proxy" "vscode" {
+  depends_on         = [helm_release.authentik]
   name               = "vscode"
   external_host      = "https://${local.vscode.host}"
   authorization_flow = data.authentik_flow.default_authorization_flow.id
   invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
   mode               = "forward_single"
+  cookie_domain      = ".${var.base_domain}"
 }
 
 resource "authentik_application" "vscode" {
@@ -33,7 +35,8 @@ resource "authentik_application" "vscode" {
 }
 
 resource "authentik_group" "vscode_users" {
-  name = "vscode-users"
+  depends_on = [helm_release.authentik]
+  name       = "vscode-users"
 }
 
 resource "authentik_policy_binding" "vscode_access" {
@@ -43,8 +46,7 @@ resource "authentik_policy_binding" "vscode_access" {
 }
 
 data "authentik_outpost" "embedded" {
-  depends_on = [helm_release.authentik]
-  name       = "authentik Embedded Outpost"
+  name = "authentik Embedded Outpost"
 }
 
 resource "authentik_outpost_provider_attachment" "vscode" {
@@ -202,70 +204,85 @@ resource "kubernetes_manifest" "vscode_forward_auth" {
   }
 }
 
-resource "kubernetes_manifest" "vscode_ingressroute" {
+resource "kubernetes_ingress_v1" "vscode" {
   depends_on = [kubernetes_manifest.vscode_forward_auth]
 
-  manifest = {
-    apiVersion = "traefik.io/v1alpha1"
-    kind       = "IngressRoute"
-    metadata = {
-      name      = "openvscode"
-      namespace = local.vscode.namespace
+  metadata {
+    name      = "openvscode"
+    namespace = local.vscode.namespace
+    annotations = {
+      "traefik.ingress.kubernetes.io/router.entrypoints" = "websecure"
+      "traefik.ingress.kubernetes.io/router.tls"         = "true"
+      "traefik.ingress.kubernetes.io/router.middlewares" = "${local.vscode.namespace}-${kubernetes_manifest.vscode_forward_auth.manifest.metadata.name}@kubernetescrd"
+      "cert-manager.io/cluster-issuer"                   = var.cluster_cert_issuer
     }
-    spec = {
-      entryPoints = ["websecure"]
-      routes = [
-        {
-          kind     = "Rule"
-          match    = "Host(`${local.vscode.host}`)"
-          priority = 10
-          services = [
-            {
+  }
+
+  spec {
+    ingress_class_name = "traefik"
+
+    rule {
+      host = local.vscode.host
+
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
               name = kubernetes_service.vscode.metadata[0].name
-              port = 3000
+              port {
+                number = 3000
+              }
             }
-          ]
-          middlewares = [
-            {
-              name      = kubernetes_manifest.vscode_forward_auth.manifest.metadata.name
-              namespace = local.vscode.namespace
-            }
-          ]
+          }
         }
-      ]
-      tls = {
-        secretName = "vscode-tls"
       }
+    }
+
+    tls {
+      secret_name = "vscode-tls"
+      hosts       = [local.vscode.host]
     }
   }
 }
 
-resource "kubernetes_manifest" "vscode_outpost_ingressroute" {
-  manifest = {
-    apiVersion = "traefik.io/v1alpha1"
-    kind       = "IngressRoute"
-    metadata = {
-      name      = "openvscode-outpost"
-      namespace = local.vscode.namespace
+resource "kubernetes_ingress_v1" "vscode_outpost" {
+  metadata {
+    name      = "openvscode-outpost"
+    namespace = local.vscode.namespace
+    annotations = {
+      "traefik.ingress.kubernetes.io/router.entrypoints" = "websecure"
+      "traefik.ingress.kubernetes.io/router.tls"         = "true"
+      "cert-manager.io/cluster-issuer"                   = var.cluster_cert_issuer
     }
-    spec = {
-      entryPoints = ["websecure"]
-      routes = [
-        {
-          kind     = "Rule"
-          match    = "Host(`${local.vscode.host}`) && PathPrefix(`/outpost.goauthentik.io/`)"
-          priority = 15
-          services = [
-            {
+  }
+
+  spec {
+    ingress_class_name = "traefik"
+
+    rule {
+      host = local.vscode.host
+
+      http {
+        path {
+          path      = "/outpost.goauthentik.io/"
+          path_type = "Prefix"
+          backend {
+            service {
               name = kubernetes_service.vscode_outpost.metadata[0].name
-              port = 9000
+              port {
+                number = 9000
+              }
             }
-          ]
+          }
         }
-      ]
-      tls = {
-        secretName = "vscode-tls"
       }
+    }
+
+    tls {
+      secret_name = "vscode-tls"
+      hosts       = [local.vscode.host]
     }
   }
 }

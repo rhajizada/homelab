@@ -2,7 +2,7 @@ locals {
   argocd = {
     repository = "https://argoproj.github.io/argo-helm"
     chart      = "argo/argo-cd"
-    version    = "7.8.23"
+    version    = "8.1.3"
     namespace  = "argocd"
     host       = "argocd.${var.base_domain}"
     groups     = ["argocd-admins", "argocd-viewers"]
@@ -36,20 +36,23 @@ resource "random_password" "argocd_client_secret" {
 }
 
 resource "authentik_group" "argocd_groups" {
-  for_each = toset(local.argocd.groups)
-  name     = each.value
+  depends_on = [helm_release.authentik]
+  for_each   = toset(local.argocd.groups)
+  name       = each.value
 }
 
 resource "authentik_provider_oauth2" "argocd" {
   depends_on = [
     helm_release.authentik
   ]
-  name               = "argocd"
-  client_type        = "confidential"
-  client_id          = random_password.argocd_client_id.result
-  client_secret      = random_password.argocd_client_secret.result
-  authorization_flow = data.authentik_flow.default_authorization_flow.id
-  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  name                    = "argocd"
+  client_type             = "confidential"
+  client_id               = random_password.argocd_client_id.result
+  client_secret           = random_password.argocd_client_secret.result
+  authorization_flow      = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow       = data.authentik_flow.default_invalidation_flow.id
+  logout_method           = "backchannel"
+  refresh_token_threshold = "seconds=0"
   allowed_redirect_uris = [
     {
       matching_mode = "strict",

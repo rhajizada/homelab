@@ -15,7 +15,7 @@ locals {
     }
 
     server = {
-      image = "ghcr.io/rhajizada/llamero/server:v0.1.0"
+      image = "ghcr.io/rhajizada/llamero/server:v0.1.1"
       resources = {
         requests = {
           cpu    = "200m"
@@ -29,7 +29,7 @@ locals {
     }
 
     worker = {
-      image = "ghcr.io/rhajizada/llamero/worker:v0.1.0"
+      image = "ghcr.io/rhajizada/llamero/worker:v0.1.1"
       resources = {
         requests = {
           cpu    = "100m"
@@ -43,7 +43,7 @@ locals {
     }
 
     scheduler = {
-      image = "ghcr.io/rhajizada/llamero/scheduler:v0.1.0"
+      image = "ghcr.io/rhajizada/llamero/scheduler:v0.1.1"
       resources = {
         requests = {
           cpu    = "50m"
@@ -106,19 +106,22 @@ resource "random_password" "llamero_client_secret" {
 }
 
 resource "authentik_group" "llamero_groups" {
-  for_each = toset(local.llamero.groups)
-  name     = each.value
+  depends_on = [helm_release.authentik]
+  for_each   = toset(local.llamero.groups)
+  name       = each.value
 }
 
 resource "authentik_provider_oauth2" "llamero" {
   depends_on = [helm_release.authentik]
 
-  name               = "llamero"
-  client_type        = "confidential"
-  client_id          = random_password.llamero_client_id.result
-  client_secret      = random_password.llamero_client_secret.result
-  authorization_flow = data.authentik_flow.default_authorization_flow.id
-  invalidation_flow  = data.authentik_flow.default_invalidation_flow.id
+  name                    = "llamero"
+  client_type             = "confidential"
+  client_id               = random_password.llamero_client_id.result
+  client_secret           = random_password.llamero_client_secret.result
+  authorization_flow      = data.authentik_flow.default_authorization_flow.id
+  invalidation_flow       = data.authentik_flow.default_invalidation_flow.id
+  logout_method           = "backchannel"
+  refresh_token_threshold = "seconds=0"
 
   allowed_redirect_uris = [
     {
