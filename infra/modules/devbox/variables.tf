@@ -8,7 +8,6 @@ variable "proxmox_node_name" {
   type        = string
 }
 
-
 variable "cluster_name" {
   description = "Cluster name"
   type        = string
@@ -24,24 +23,18 @@ variable "environment" {
   type        = string
 }
 
-variable "ubuntu_image" {
-  description = "Ubuntu Cloud Image ID"
+variable "arch_image" {
+  description = "Arch Linux Image ID"
   type        = string
-}
-
-variable "dns_name" {
-  description = "VPN server dns"
-  type        = string
-  default     = ""
 }
 
 variable "ip_address" {
-  description = "IP adress of VPN VM"
+  description = "IP address of devbox VM"
   type        = string
 }
 
 variable "vm_config" {
-  description = "Configuration for VPN node VMs"
+  description = "Configuration for devbox VM"
   type = object({
     cpu = number
     disk = object({
@@ -62,7 +55,7 @@ variable "vm_config" {
     network = string
   })
   default = {
-    cpu = 1
+    cpu = 2
     disk = {
       datastore_id = "local-lvm"
       interface    = "scsi0"
@@ -73,11 +66,18 @@ variable "vm_config" {
       file_format  = "raw"
     }
     efi_disk = {
-      datastore_id = "local-lvm"
+      datastore_id = "local"
       file_format  = "raw"
       type         = "4m"
     }
-    memory  = 2048
+    memory  = 4048
     network = "vmbr0"
   }
 }
+
+variable "admin_user" {
+  description = "devbox admin user"
+  type        = string
+  default     = "admin"
+}
+

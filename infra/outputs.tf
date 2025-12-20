@@ -70,3 +70,27 @@ output "dns_node_credentials" {
   sensitive   = true
   value       = module.dns.credentials
 }
+
+output "samba_node_ip" {
+  description = "IP Address of Samba node"
+  sensitive   = false
+  value       = module.samba.ip_address
+}
+
+output "samba_node_credentials" {
+  description = "Samba node credentials"
+  sensitive   = true
+  value       = module.samba.ssh_credentials
+}
+
+output "samba_admin_credentials" {
+  description = "Samba admin credentials"
+  value       = module.samba.admin_credentials
+  sensitive   = true
+}
+
+output "devbox_node_credentials" {
+  description = "Devbox node credentials"
+  sensitive   = true
+  value       = module.devbox.ssh_credentials
+}

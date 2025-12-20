@@ -13,6 +13,10 @@ variable "proxmox_secondary_node" {
   type        = string
 }
 
+variable "proxmox_storage_node" {
+  description = "Proxmox node used for storage services (e.g. Samba)"
+  type        = string
+}
 
 variable "base_domain" {
   description = "Base domain that will be serving the cluster"
@@ -22,6 +26,17 @@ variable "base_domain" {
   validation {
     condition     = can(regex("^([a-zA-Z0-9][-a-zA-Z0-9]*\\.)+[a-zA-Z]{2,}$", var.base_domain)) || var.base_domain == ""
     error_message = "'base_domain' must be a valid domain name or an empty string."
+  }
+}
+
+variable "dns_subzone_records" {
+  description = "Map of DNS subzones to IPv4 addresses for explicit A records"
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition     = alltrue([for ip in values(var.dns_subzone_records) : can(cidrhost("${ip}/32", 0))])
+    error_message = "All dns_subzone_records values must be valid IPv4 addresses"
   }
 }
 
@@ -152,9 +167,15 @@ variable "talos_gpu_vm_config" {
 }
 
 variable "ubuntu_version" {
-  description = "Version of Ubuntu to deploy for VPN VM"
+  description = "Version of Ubuntu to deploy for VPN/DNS/Samba VMs"
   type        = string
-  default     = "24.10"
+  default     = "24.04"
+}
+
+variable "arch_version" {
+  description = "Version of Arch Linux to deploy for Devbox VM"
+  type        = string
+  default     = "latest"
 }
 
 variable "vpn_vm_config" {
@@ -241,3 +262,152 @@ variable "dns_vm_config" {
   }
 }
 
+variable "samba_vm_config" {
+  description = "Configuration for Samba VM"
+  type = object({
+    cpu = number
+    disk = object({
+      datastore_id = string
+      interface    = string
+      iothread     = bool
+      ssd          = bool
+      discard      = string
+      size         = number
+      file_format  = string
+    })
+    efi_disk = object({
+      datastore_id = string
+      file_format  = string
+      type         = string
+    })
+    memory  = number
+    network = string
+  })
+  default = {
+    cpu = 2
+    disk = {
+      datastore_id = "local-lvm"
+      interface    = "scsi0"
+      iothread     = true
+      ssd          = true
+      discard      = "on"
+      size         = 32
+      file_format  = "raw"
+    }
+    efi_disk = {
+      datastore_id = "local"
+      file_format  = "raw"
+      type         = "4m"
+    }
+    memory  = 4096
+    network = "vmbr0"
+  }
+}
+
+variable "samba_guest_user" {
+  description = "Samba guest user"
+  type        = string
+  default     = "guest"
+}
+
+variable "samba_admin_user" {
+  description = "Samba admin user"
+  type        = string
+  default     = "admin"
+}
+
+variable "samba_storage_path" {
+  description = "Filesystem path exported by Samba"
+  type        = string
+  default     = "/mnt"
+}
+
+variable "samba_directories" {
+  description = "Directories to expose via Samba under the storage path"
+  type = list(object({
+    name   = string
+    public = bool
+  }))
+  default = [
+    {
+      name   = "public"
+      public = true
+    },
+    {
+      name   = "private"
+      public = false
+    },
+    {
+      name   = "backups"
+      public = false
+    }
+  ]
+}
+
+variable "samba_data_disk" {
+  description = "Data disk configuration for Samba storage"
+  type = object({
+    datastore_id = string
+    size         = number
+    interface    = string
+    ssd          = bool
+    discard      = string
+    file_format  = string
+  })
+  default = {
+    datastore_id = "data-lvm"
+    size         = 4000
+    interface    = "scsi1"
+    ssd          = true
+    discard      = "on"
+    file_format  = "raw"
+  }
+}
+
+variable "devbox_vm_config" {
+  description = "Configuration for Dev VM"
+  type = object({
+    cpu = number
+    disk = object({
+      datastore_id = string
+      interface    = string
+      iothread     = bool
+      ssd          = bool
+      discard      = string
+      size         = number
+      file_format  = string
+    })
+    efi_disk = object({
+      datastore_id = string
+      file_format  = string
+      type         = string
+    })
+    memory  = number
+    network = string
+  })
+  default = {
+    cpu = 2
+    disk = {
+      datastore_id = "data-lvm"
+      interface    = "scsi0"
+      iothread     = true
+      ssd          = true
+      discard      = "on"
+      size         = 120
+      file_format  = "raw"
+    }
+    efi_disk = {
+      datastore_id = "local"
+      file_format  = "raw"
+      type         = "4m"
+    }
+    memory  = 4096
+    network = "vmbr0"
+  }
+}
+
+variable "devbox_admin_user" {
+  description = "Devbox admin user"
+  type        = string
+  default     = "admin"
+}

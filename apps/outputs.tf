@@ -29,15 +29,6 @@ output "harbor_admin_password" {
   sensitive   = true
 }
 
-output "minio_admin_credentials" {
-  description = "minio admin user credentials"
-  value = {
-    username = local.minio.admin.username
-    password = random_password.minio_admin_password.result
-  }
-  sensitive = true
-}
-
 output "argocd_admin_password" {
   description = "argocd admin password"
   value       = random_password.argocd_admin_password.result

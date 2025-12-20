@@ -15,9 +15,13 @@ terraform {
       source  = "hashicorp/helm"
       version = "2.17.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "4.1.0"
+    }
     authentik = {
       source  = "goauthentik/authentik"
-      version = "2024.12.1"
+      version = "2025.10.1"
     }
     bcrypt = {
       source  = "viktorradnai/bcrypt"

@@ -20,6 +20,7 @@ locals {
       base_domain         = var.base_domain
       aws_route53_zone_id = var.aws_route53_zone_id
       k8s_lb_ip           = var.k8s_lb_ip
+      subzone_records     = var.subzone_records
     })
   }
   resolved_configuration = templatefile("${path.module}/templates/resolved.conf.tmpl", {})
@@ -83,11 +84,9 @@ resource "proxmox_virtual_environment_file" "dns_user_data" {
         - mv coredns /usr/bin/
         - cd --
         - systemctl daemon-reload
-        - systemctl enable qemu-guest-agent
-        - systemctl start qemu-guest-agent
+        - systemctl enable --now qemu-guest-agent
         - systemctl restart systemd-resolved
-        - systemctl enable coredns
-        - systemctl start coredns
+        - systemctl enable --now coredns
         - echo "done" > /tmp/cloud-config.done
     EOF
 

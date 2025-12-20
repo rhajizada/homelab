@@ -66,12 +66,10 @@ resource "proxmox_virtual_environment_file" "vpn_user_data" {
         - apt update
         - apt upgrade
         - apt install -y qemu-guest-agent net-tools wireguard
-        - systemctl enable qemu-guest-agent
-        - systemctl start qemu-guest-agent
+        - systemctl enable --now qemu-guest-agent
         - echo "net.ipv4.ip_forward=1" | tee -a /etc/sysctl.conf
         - sysctl -p
-        - systemctl enable wg-quick@wg0
-        - systemctl start wg-quick@wg0
+        - systemctl enable --now wg-quick@wg0
         - echo "done" > /tmp/cloud-config.done
       EOF
 

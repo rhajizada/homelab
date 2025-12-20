@@ -7,12 +7,17 @@ locals {
   control_node_ips = [for i in range(var.talos_vm_config.control.count) : cidrhost(var.cluster_ip_range, 5 + i)]
   worker_node_ips  = [for i in range(var.talos_vm_config.worker.count) : cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + i)]
   gpu_node_ip      = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 1)
+  samba_node_ip    = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 2)
+  devbox_node_ip   = cidrhost(var.cluster_ip_range, 5 + var.talos_vm_config.control.count + var.talos_vm_config.worker.count + 3)
+  dns_subzone_records = merge(
+    { samba = local.samba_node_ip },
+    var.dns_subzone_records
+  )
 }
 
 module "vpn" {
   source                  = "./modules/vpn"
   cluster_name            = var.cluster_name
-  cluster_node_network    = var.cluster_node_network
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
@@ -26,13 +31,13 @@ module "vpn" {
 module "dns" {
   source                  = "./modules/dns"
   cluster_name            = var.cluster_name
-  cluster_node_network    = var.cluster_node_network
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
   proxmox_node_name       = var.proxmox_secondary_node
   ip_address              = local.dns_ip
   base_domain             = var.base_domain
+  subzone_records         = local.dns_subzone_records
   aws_region              = module.route53.aws_region
   aws_route53_zone_id     = module.route53.route_53_zone_id
   aws_iam_credentials     = module.route53.coredns_iam_user
@@ -52,7 +57,6 @@ module "route53" {
 module "talos" {
   source                  = "./modules/talos"
   cluster_name            = var.cluster_name
-  cluster_node_network    = var.cluster_node_network
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
@@ -72,4 +76,32 @@ module "talos" {
   acme_server             = var.acme_server
 }
 
+module "samba" {
+  source                  = "./modules/samba"
+  cluster_name            = var.cluster_name
+  cluster_network_gateway = var.cluster_network_gateway
+  environment             = var.environment
+  proxmox_endpoint        = var.proxmox_endpoint
+  proxmox_node_name       = var.proxmox_storage_node
+  ip_address              = local.samba_node_ip
+  vm_config               = var.samba_vm_config
+  ubuntu_image            = proxmox_virtual_environment_download_file.ubuntu_image_storage.id
+  guest_user              = var.samba_guest_user
+  admin_user              = var.samba_admin_user
+  storage_path            = var.samba_storage_path
+  samba_directories       = var.samba_directories
+  samba_data_disk         = var.samba_data_disk
+}
 
+module "devbox" {
+  source                  = "./modules/devbox"
+  cluster_name            = var.cluster_name
+  cluster_network_gateway = var.cluster_network_gateway
+  environment             = var.environment
+  proxmox_endpoint        = var.proxmox_endpoint
+  proxmox_node_name       = var.proxmox_secondary_node
+  ip_address              = local.devbox_node_ip
+  vm_config               = var.devbox_vm_config
+  arch_image              = proxmox_virtual_environment_download_file.arch_image.id
+  admin_user              = var.devbox_admin_user
+}

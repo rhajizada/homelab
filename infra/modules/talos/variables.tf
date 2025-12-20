@@ -24,11 +24,6 @@ variable "cluster_name" {
   type        = string
 }
 
-variable "cluster_node_network" {
-  description = "The IP network of the cluster nodes"
-  type        = string
-}
-
 variable "cluster_network_gateway" {
   description = "The IP network gateway of the cluster nodes"
   type        = string

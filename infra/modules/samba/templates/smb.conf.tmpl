@@ -1,0 +1,48 @@
+[global]
+  server role = standalone server
+  workgroup = WORKGROUP
+
+  map to guest = Bad User
+  guest account = ${guest_user}
+  security = user
+
+  server min protocol = SMB2
+  client min protocol = SMB2
+  server signing = auto
+
+  vfs objects = catia fruit streams_xattr
+  fruit:model = MacSamba
+  fruit:metadata = stream
+  fruit:resource = file
+  fruit:locking = none
+  fruit:encoding = native
+
+  log file = /var/log/samba/log.%m
+  max log size = 1000
+
+  local master = no
+  preferred master = no
+  domain master = no
+  os level = 20
+
+  host msdfs = no
+  usershare max shares = 0
+
+%{ for share in samba_directories ~}
+[${share.name}]
+  path = ${storage_path}/${share.name}
+  browseable = yes
+  guest ok = %{ if share.public }yes%{ else }no%{ endif }
+  read only = %{ if share.public }yes%{ else }no%{ endif }
+
+%{ if !share.public }
+  valid users = ${admin_user}, @${admin_user}
+%{ endif }
+
+  write list = ${admin_user}, @${admin_user}
+  force user = ${admin_user}
+  force group = ${admin_user}
+  create mask = 0664
+  directory mask = 0775
+
+%{ endfor ~}

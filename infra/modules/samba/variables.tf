@@ -16,7 +16,6 @@ variable "cluster_name" {
 variable "cluster_network_gateway" {
   description = "The IP network gateway of the cluster nodes"
   type        = string
-  default     = "192.168.1.1"
 }
 
 variable "environment" {
@@ -29,55 +28,13 @@ variable "ubuntu_image" {
   type        = string
 }
 
-variable "base_domain" {
-  description = "Base domain that will be serving the cluster"
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = can(regex("^([a-zA-Z0-9][-a-zA-Z0-9]*\\.)+[a-zA-Z]{2,}$", var.base_domain)) || var.base_domain == ""
-    error_message = "'base_domain' must be a valid domain name or an empty string"
-  }
-}
-
-variable "subzone_records" {
-  description = "Map of subzones to IPv4 addresses for explicit A records"
-  type        = map(string)
-  default     = {}
-
-  validation {
-    condition     = alltrue([for ip in values(var.subzone_records) : can(cidrhost("${ip}/32", 0))])
-    error_message = "All subzone_records values must be valid IPv4 addresses"
-  }
-}
-
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-}
-
-variable "aws_route53_zone_id" {
-  description = "AWS Route 53 hosted zone id"
-  type        = string
-}
-
-
-variable "aws_iam_credentials" {
-  description = "AWS IAM user credentials for cert-manager"
-  type = object({
-    access_key_id     = string
-    secret_access_key = string
-  })
-}
-
-
 variable "ip_address" {
-  description = "IP address of DNS VM instance"
+  description = "IP address of Samba VM"
   type        = string
 }
 
 variable "vm_config" {
-  description = "Configuration for VPN node VMs"
+  description = "Configuration for Samba VM"
   type = object({
     cpu = number
     disk = object({
@@ -98,27 +55,78 @@ variable "vm_config" {
     network = string
   })
   default = {
-    cpu = 1
+    cpu = 2
     disk = {
       datastore_id = "local-lvm"
       interface    = "scsi0"
       iothread     = true
       ssd          = true
       discard      = "on"
-      size         = 16
+      size         = 32
       file_format  = "raw"
     }
     efi_disk = {
-      datastore_id = "local-lvm"
+      datastore_id = "local"
       file_format  = "raw"
       type         = "4m"
     }
-    memory  = 2048
+    memory  = 4048
     network = "vmbr0"
   }
 }
 
-variable "k8s_lb_ip" {
-  description = "Kubernetes load balancer IP"
+variable "guest_user" {
+  description = "Samba guest user"
   type        = string
+  default     = "guest"
+}
+
+variable "admin_user" {
+  description = "Samba admin user"
+  type        = string
+  default     = "admin"
+}
+
+variable "storage_path" {
+  description = "Filesystem path exported by Samba"
+  type        = string
+  default     = "/mnt"
+}
+
+variable "samba_data_disk" {
+  description = "Data disk configuration for Samba storage"
+  type = object({
+    datastore_id = string
+    size         = number
+    interface    = string
+    ssd          = bool
+    discard      = string
+    file_format  = string
+  })
+  default = {
+    datastore_id = "local-lvm"
+    size         = 256
+    interface    = "scsi1"
+    ssd          = true
+    discard      = "on"
+    file_format  = "raw"
+  }
+}
+
+variable "samba_directories" {
+  description = "Directories to expose via Samba under the storage path"
+  type = list(object({
+    name   = string
+    public = bool
+  }))
+  default = [
+    {
+      name   = "public"
+      public = true
+    },
+    {
+      name   = "private"
+      public = false
+    }
+  ]
 }
