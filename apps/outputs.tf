@@ -34,13 +34,3 @@ output "argocd_admin_password" {
   value       = random_password.argocd_admin_password.result
   sensitive   = true
 }
-
-output "llamero_oauth_credentials" {
-  description = "llamero OAuth app credentials"
-  value = {
-    client_id     = random_password.llamero_client_id.result
-    client_secret = random_password.llamero_client_secret.result
-
-  }
-  sensitive = true
-}
