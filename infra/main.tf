@@ -99,9 +99,18 @@ module "devbox" {
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
   proxmox_endpoint        = var.proxmox_endpoint
-  proxmox_node_name       = var.proxmox_secondary_node
+  proxmox_node_name       = var.proxmox_storage_node
   ip_address              = local.devbox_node_ip
   vm_config               = var.devbox_vm_config
   arch_image              = proxmox_virtual_environment_download_file.arch_image.id
   admin_user              = var.devbox_admin_user
+  samba_host              = local.samba_node_ip
+  samba_mounts = [
+    for d in var.samba_directories : {
+      name  = d.name
+      share = d.name
+    }
+  ]
+  samba_username = module.samba.admin_credentials.username
+  samba_password = module.samba.admin_credentials.password
 }

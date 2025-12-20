@@ -16,15 +16,17 @@ resource "proxmox_virtual_environment_download_file" "ubuntu_image" {
 
   file_name = local.ubuntu_image.file_name
   url       = local.ubuntu_image.url
+  overwrite = true
 }
 
 resource "proxmox_virtual_environment_download_file" "arch_image" {
   content_type = "iso"
   datastore_id = "local"
-  node_name    = var.proxmox_secondary_node
+  node_name    = var.proxmox_storage_node
 
   file_name = local.arch_image.file_name
   url       = local.arch_image.url
+  overwrite = true
 }
 
 resource "proxmox_virtual_environment_download_file" "ubuntu_image_storage" {
@@ -34,4 +36,5 @@ resource "proxmox_virtual_environment_download_file" "ubuntu_image_storage" {
 
   file_name = local.ubuntu_image.file_name
   url       = local.ubuntu_image.url
+  overwrite = true
 }

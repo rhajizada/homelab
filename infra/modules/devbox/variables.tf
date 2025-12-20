@@ -81,3 +81,27 @@ variable "admin_user" {
   default     = "admin"
 }
 
+variable "samba_host" {
+  description = "Samba host for devbox mounts"
+  type        = string
+}
+
+variable "samba_username" {
+  description = "Samba username for devbox mounts"
+  type        = string
+}
+
+variable "samba_password" {
+  description = "Samba password for devbox mounts"
+  type        = string
+  sensitive   = true
+}
+
+variable "samba_mounts" {
+  description = "Samba shares to mount under /mnt/{name}"
+  type = list(object({
+    name  = string
+    share = string
+  }))
+  default = []
+}

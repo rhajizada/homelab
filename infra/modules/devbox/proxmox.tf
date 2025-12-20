@@ -2,6 +2,12 @@ locals {
   devbox_node = {
     name = "${var.cluster_name}-${var.environment}-devbox"
   }
+
+  samba_mount_paths = join(" ", [for mount in var.samba_mounts : "/mnt/${mount.name}"])
+  samba_fstab_entries = trimspace(templatefile("${path.module}/templates/fstab.tmpl", {
+    samba_host   = var.samba_host
+    samba_mounts = var.samba_mounts
+  }))
 }
 
 resource "tls_private_key" "root_ssh" {
@@ -37,11 +43,25 @@ resource "proxmox_virtual_environment_file" "devbox_user_data" {
           sudo: ALL=(ALL) NOPASSWD:ALL
           lock_passwd: true
       ssh_pwauth: false
+      write_files:
+        - content: |
+            username=${var.samba_username}
+            password=${var.samba_password}
+          path: /etc/samba/credentials
+          permissions: '0600'
+        - content: |
+            ${indent(6, local.samba_fstab_entries)}
+          path: /etc/fstab
+          append: true
       runcmd:
         - pacman -Sy --noconfirm
-        - pacman -S --noconfirm qemu-guest-agent avahi-daemon
+        - pacman -S --noconfirm qemu-guest-agent cifs-utils
+        - |
+          for mount in ${local.samba_mount_paths}; do
+            mkdir -p "$mount"
+          done
         - systemctl enable --now qemu-guest-agent
-        - systemctl enable --now avahi-daemon
+        - mount -a
         - echo "done" > /tmp/cloud-config.done
       EOF
 
