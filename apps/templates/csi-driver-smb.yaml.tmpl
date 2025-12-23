@@ -1,0 +1,32 @@
+windows:
+  enabled: false
+
+controller:
+  runOnControlPlane: true
+  runOnMaster: false
+
+linux:
+  enabled: true
+
+storageClasses:
+%{ for sc in storage_classes ~}
+  - name: ${sc.name}
+    parameters:
+      source: "${sc.source}"
+      csi.storage.k8s.io/provisioner-secret-name: ${sc.secret_name}
+      csi.storage.k8s.io/provisioner-secret-namespace: ${sc.secret_namespace}
+      csi.storage.k8s.io/node-stage-secret-name: ${sc.secret_name}
+      csi.storage.k8s.io/node-stage-secret-namespace: ${sc.secret_namespace}
+    reclaimPolicy: ${sc.reclaim_policy}
+    volumeBindingMode: Immediate
+    allowVolumeExpansion: true
+    mountOptions:
+      - uid=1000
+      - gid=1000
+      - file_mode=0664
+      - dir_mode=0775
+      - noperm
+      - mfsymlinks
+      - cache=strict
+      - noserverino
+%{ endfor ~}

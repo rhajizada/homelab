@@ -9,16 +9,6 @@ variable "base_domain" {
   }
 }
 
-variable "k8s_version" {
-  type        = string
-  description = "Version of Kubenetes to deploy"
-  default     = "1.32.1"
-  validation {
-    condition     = can(regex("^\\d+(\\.\\d+)+", var.k8s_version))
-    error_message = "must be a version number"
-  }
-}
-
 variable "kubeconfig" {
   description = "Path to kubeconfig file"
   type        = string
@@ -34,3 +24,13 @@ variable "cluster_cert_issuer" {
   description = "K8s cert-manager cluster issuer"
   type        = string
 }
+
+variable "samba_credentials" {
+  type = object({
+    address  = string
+    username = string
+    password = string
+    shares   = list(string)
+  })
+}
+
