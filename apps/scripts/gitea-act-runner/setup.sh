@@ -5,6 +5,7 @@ apk add --no-cache \
   alpine-sdk \
   build-base \
   curl \
+  docker \
   file \
   git \
   gzip \
