@@ -1,0 +1,53 @@
+env:
+  TZ: "America/New_York"
+  LOG_LEVEL: "info"
+  BASE_URL: "https://${host}"
+  NEXTAUTH_URL: "https://${host}"
+  AUTH_PROVIDERS: "oidc"
+  AUTH_OIDC_ISSUER: "https://${authentik_host}/application/o/${oidc_slug}/"
+  AUTH_OIDC_URI: "https://${authentik_host}/application/o/authorize/"
+  AUTH_OIDC_CLIENT_NAME: "${oidc_name}"
+  AUTH_OIDC_SCOPE_OVERWRITE: "${oidc_scopes}"
+  AUTH_OIDC_GROUPS_ATTRIBUTE: "groups"
+  AUTH_LOGOUT_REDIRECT_URL: "https://${authentik_host}/application/o/${oidc_slug}/end-session/"
+  AUTH_OIDC_AUTO_LOGIN: "true"
+
+database:
+  type: sqlite
+  migrationEnabled: true
+
+envSecrets:
+  authOidcCredentials:
+    existingSecret: "homarr-authentik-secret"
+    oidcClientId: "oidc-client-id"
+    oidcClientSecret: "oidc-client-secret"
+  dbEncryption:
+    existingSecret: "homarr-db-encryption"
+    key: "db-encryption-key"
+
+ingress:
+  enabled: true
+  ingressClassName: "traefik"
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: ${cert_issuer}
+  hosts:
+    - host: ${host}
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: authentik-tls
+      hosts:
+        - ${host}
+
+persistence:
+  homarrDatabase:
+    enabled: true
+    name: "homarr-database"
+    storageClassName: "longhorn"
+    accessMode: "ReadWriteMany"
+    size: "512Mi"
+
+rbac:
+  enabled: true
