@@ -914,8 +914,9 @@ resource "kubernetes_deployment" "ollama" {
 
       spec {
         container {
-          name  = "ollama"
-          image = local.llamero.ollama.image
+          name              = "ollama"
+          image             = local.llamero.ollama.image
+          image_pull_policy = "Always"
 
           port {
             name           = "http"

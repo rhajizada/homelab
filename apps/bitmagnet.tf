@@ -6,7 +6,7 @@ locals {
     postgres_image = "postgres:16-alpine"
     storage = {
       config   = "2Gi"
-      postgres = "32Gi"
+      postgres = "64Gi"
     }
     resources = {
       requests = {
@@ -102,7 +102,7 @@ resource "kubernetes_stateful_set" "bitmagnet_postgres" {
   }
   spec {
     service_name = "bitmagnet-postgres"
-    replicas = 1
+    replicas     = 1
     selector {
       match_labels = {
         app = "bitmagnet-postgres"
