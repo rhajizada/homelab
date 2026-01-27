@@ -15,7 +15,7 @@ locals {
     }
 
     server = {
-      image = "ghcr.io/rhajizada/llamero/server:v0.1.1"
+      image = "ghcr.io/rhajizada/llamero/server:v0.1.2"
       resources = {
         requests = {
           cpu    = "200m"
@@ -29,7 +29,7 @@ locals {
     }
 
     worker = {
-      image = "ghcr.io/rhajizada/llamero/worker:v0.1.1"
+      image = "ghcr.io/rhajizada/llamero/worker:v0.1.2"
       resources = {
         requests = {
           cpu    = "100m"
@@ -43,7 +43,7 @@ locals {
     }
 
     scheduler = {
-      image = "ghcr.io/rhajizada/llamero/scheduler:v0.1.1"
+      image = "ghcr.io/rhajizada/llamero/scheduler:v0.1.2"
       resources = {
         requests = {
           cpu    = "50m"
