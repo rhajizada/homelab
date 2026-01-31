@@ -51,5 +51,3 @@ data "helm_template" "traefik" {
     })
   ]
 }
-
-

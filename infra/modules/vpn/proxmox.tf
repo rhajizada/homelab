@@ -137,4 +137,3 @@ resource "proxmox_virtual_environment_vm" "vpn_node" {
     user_data_file_id = proxmox_virtual_environment_file.vpn_user_data.id
   }
 }
-

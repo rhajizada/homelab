@@ -63,4 +63,3 @@ resource "helm_release" "csi_smb" {
     })
   ]
 }
-

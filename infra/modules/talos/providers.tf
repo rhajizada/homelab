@@ -28,4 +28,3 @@ provider "proxmox" {
     agent = true
   }
 }
-

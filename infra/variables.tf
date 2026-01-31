@@ -78,13 +78,6 @@ variable "cluster_ip_range" {
 
 
 
-variable "cluster_node_network" {
-  description = "The IP network of the cluster nodes"
-  type        = string
-  default     = "192.168.1.1/24"
-}
-
-
 variable "cluster_network_gateway" {
   description = "The IP network gateway of the cluster nodes"
   type        = string
@@ -106,7 +99,7 @@ variable "talos_version" {
 variable "k8s_version" {
   type        = string
   description = "Version of Kubenetes to deploy"
-  default     = "1.32"
+  default     = "1.32.1"
   validation {
     condition     = can(regex("^\\d+(\\.\\d+)+", var.k8s_version))
     error_message = "must be a version number"

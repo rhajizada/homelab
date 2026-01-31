@@ -67,6 +67,7 @@ module "talos" {
   worker_node_ips         = local.worker_node_ips
   gpu_node_ip             = local.gpu_node_ip
   talos_version           = var.talos_version
+  k8s_version             = var.k8s_version
   vm_config               = var.talos_vm_config
   gpu_vm_config           = var.talos_gpu_vm_config
   aws_iam_credentials     = module.route53.talos_iam_user

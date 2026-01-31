@@ -33,4 +33,3 @@ variable "samba_credentials" {
     shares   = list(string)
   })
 }
-
