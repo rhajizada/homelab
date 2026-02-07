@@ -57,7 +57,7 @@ locals {
     }
 
     ui = {
-      image = "ghcr.io/rhajizada/llamero/ui:sha-0ea83de"
+      image = "ghcr.io/rhajizada/llamero/ui:v0.1.2"
       resources = {
         requests = {
           cpu    = "250m"

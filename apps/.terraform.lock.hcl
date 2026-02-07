@@ -6,6 +6,7 @@ provider "registry.terraform.io/goauthentik/authentik" {
   constraints = "2025.10.1"
   hashes = [
     "h1:L1IxXIBFj5JDy7JpaXWgd7/lDGoVKzDnGdwrkijSKhM=",
+    "h1:X0bV1LqI7nu4np+xiGP8yLVfyl6rh/XNXz7QQ7Hsr6g=",
     "zh:02ac2478c8901043a0455b8b6b8185e9814786bd802a9aa6d4126d4f56d4735d",
     "zh:24d680732a9ea72a86c1e7bf4aa13ab9cc0c60ee4bd4cae8af43670eff88edd9",
     "zh:4f415f177671eeea2234eb835479bbb710e811e60864cec6a00ee0e03a412fa3",
@@ -27,6 +28,7 @@ provider "registry.terraform.io/hashicorp/helm" {
   version     = "2.17.0"
   constraints = "2.17.0"
   hashes = [
+    "h1:K5FEjxvDnxb1JF1kG1xr8J3pNGxoaR3Z0IBG9Csm/Is=",
     "h1:kQMkcPVvHOguOqnxoEU2sm1ND9vCHiT8TvZ2x6v/Rsw=",
     "zh:06fb4e9932f0afc1904d2279e6e99353c2ddac0d765305ce90519af410706bd4",
     "zh:104eccfc781fc868da3c7fec4385ad14ed183eb985c96331a1a937ac79c2d1a7",
@@ -44,8 +46,10 @@ provider "registry.terraform.io/hashicorp/helm" {
 }
 
 provider "registry.terraform.io/hashicorp/kubernetes" {
-  version = "2.35.1"
+  version     = "2.35.1"
+  constraints = "2.35.1"
   hashes = [
+    "h1:Av0Wk8g2XjY2oap7nyWNHEgfCRfphdJvrkqJjEM2ZKM=",
     "h1:zgXeWvp4//Ry+4glwNrLMpPFOU8QBQlARNmR9WCNe9o=",
     "zh:12212ca5ae47823ce14bfafb909eeb6861faf1e2435fb2fc4a8b334b3544b5f5",
     "zh:3f49b3d77182df06b225ab266667de69681c2e75d296867eb2cf06a8f8db768c",
@@ -66,6 +70,7 @@ provider "registry.terraform.io/hashicorp/random" {
   version     = "3.6.3"
   constraints = "3.6.3"
   hashes = [
+    "h1:Fnaec9vA8sZ8BXVlN3Xn9Jz3zghSETIKg7ch8oXhxno=",
     "h1:zG9uFP8l9u+yGZZvi5Te7PV62j50azpgwPunq2vTm1E=",
     "zh:04ceb65210251339f07cd4611885d242cd4d0c7306e86dda9785396807c00451",
     "zh:448f56199f3e99ff75d5c0afacae867ee795e4dfda6cb5f8e3b2a72ec3583dd8",
@@ -86,6 +91,7 @@ provider "registry.terraform.io/hashicorp/tls" {
   version     = "4.1.0"
   constraints = "4.1.0"
   hashes = [
+    "h1:Ka8mEwRFXBabR33iN/WTIEW6RP0z13vFsDlwn11Pf2I=",
     "h1:zEv9tY1KR5vaLSyp2lkrucNJ+Vq3c+sTFK9GyQGLtFs=",
     "zh:14c35d89307988c835a7f8e26f1b83ce771e5f9b41e407f86a644c0152089ac2",
     "zh:2fb9fe7a8b5afdbd3e903acb6776ef1be3f2e587fb236a8c60f11a9fa165faa8",
@@ -107,6 +113,7 @@ provider "registry.terraform.io/viktorradnai/bcrypt" {
   constraints = "0.1.2"
   hashes = [
     "h1:W1+B3cBuNSIxc4fbtszzzhEXQMuDJQrY5/JrU+ORTBg=",
+    "h1:dcEUuoU5x1LCocdkmiV/jVVy2VyddTGQQBr4oO92X9s=",
     "zh:135e99d3d36a49dcec9e6898de0070a6b7c01e3c0eaefeaaedf7336f71d590ff",
     "zh:1c3e89cf19118fc07d7b04257251fc9897e722c16e0a0df7b07fcd261f8c12e7",
     "zh:22c2ec30603f55e8e3c4f54ad22da2cc77a98e7988ec16bc06c652fb3a7e3dc3",
