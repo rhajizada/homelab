@@ -75,14 +75,18 @@ locals {
       storage     = "128Gi"
       volume_name = "ollama-pv"
       models = [
-        "deepseek-r1:14b",
         "gemma3:12b",
         "gpt-oss:20b",
         "llama3.1:8b",
         "llama3.2:3b",
+        "llava:7b",
         "nomic-embed-text",
         "qwen3:14b"
       ]
+      env = {
+        OLLAMA_CONTEXT_LENGTH = 16384
+        OLLAMA_HOST           = "0.0.0.0:11434"
+      }
     }
 
     groups = ["llamero-admins", "llamero-users"]
@@ -923,9 +927,12 @@ resource "kubernetes_deployment" "ollama" {
             container_port = 11434
           }
 
-          env {
-            name  = "OLLAMA_HOST"
-            value = "0.0.0.0:11434"
+          dynamic "env" {
+            for_each = local.llamero.ollama.env
+            content {
+              name  = env.key
+              value = env.value
+            }
           }
 
           resources {

@@ -2,7 +2,6 @@ locals {
   kaneo = {
     namespace = "kaneo"
     host      = "kaneo.${var.base_domain}"
-    tag       = ""
 
     postgres = {
       image   = "postgres:16"
