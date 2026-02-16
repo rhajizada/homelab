@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvidia-device-plugin-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    version: v1
+    flags:
+      migStrategy: none
+    sharing:
+      timeSlicing:
+        resources:
+          - name: nvidia.com/gpu
+            replicas: ${replicas}
+%{ if product_name != "" }
+            productName: "${product_name}"
+%{ endif }

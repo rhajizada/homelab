@@ -1,5 +1,6 @@
 locals {
   cluster_endpoint = "https://${var.k8s_vip}:6443"
+  gpu_enabled      = var.gpu_vm_config.enabled
   common_machine_config = {
     machine = {
       install = {
@@ -19,6 +20,81 @@ locals {
       }
     }
   }
+  nvidia_device_plugin_config = var.gpu_time_slicing.enabled ? templatefile("${path.module}/templates/nvidia-device-plugin-configmap.yaml.tmpl", {
+    product_name = var.gpu_time_slicing.product_name
+    replicas     = var.gpu_time_slicing.replicas
+  }) : ""
+  nvidia_device_plugin_config_hash = var.gpu_time_slicing.enabled ? base64sha256(local.nvidia_device_plugin_config) : ""
+  inline_manifests_common = [
+    {
+      name = "metallb"
+      contents = templatefile("${path.module}/templates/metallb.yaml.tmpl", {
+        cidr_pool = ["${var.k8s_lb_ip}/32"]
+      })
+    },
+    {
+      name     = "cert-manager"
+      contents = data.helm_template.cert_manager.manifest
+    },
+    {
+      name = "cert-manager-issuer"
+      contents = templatefile("${path.module}/templates/cert-manager.yaml.tmpl", {
+        acme_server           = var.acme_server
+        acme_email            = var.acme_email
+        aws_region            = var.aws_region
+        aws_access_key_id     = var.aws_iam_credentials.access_key_id
+        aws_secret_access_key = var.aws_iam_credentials.secret_access_key
+        hosted_zone_id        = var.aws_route53_zone_id
+        issuer_name           = local.cert_manager.issuer_name
+      })
+    },
+    {
+      name = "traefik-namespace"
+      contents = templatefile("${path.module}/templates/namespace.yaml.tmpl", {
+        namespace = local.traefik.namespace
+      })
+    },
+    {
+      name     = "traefik-crds"
+      contents = data.helm_template.traefik_crds.manifest
+    },
+    {
+      name     = "traefik"
+      contents = data.helm_template.traefik.manifest
+    },
+    {
+      name = "longhorn-namespace"
+      contents = templatefile("${path.module}/templates/namespace.yaml.tmpl", {
+        namespace = local.longhorn.namespace
+      })
+    },
+    {
+      name     = "longhorn"
+      contents = data.helm_template.longhorn.manifest
+    }
+  ]
+  inline_manifests_gpu = local.gpu_enabled ? concat(
+    var.gpu_time_slicing.enabled ? [
+      {
+        name     = "nvidia-device-plugin-config"
+        contents = local.nvidia_device_plugin_config
+      }
+    ] : [],
+    [
+      {
+        name = "nvidia-device-plugin"
+        contents = templatefile("${path.module}/templates/nvidia-device-plugin.yaml.tmpl", {
+          version     = local.nvidia_device_plugin.version
+          use_config  = var.gpu_time_slicing.enabled
+          config_hash = local.nvidia_device_plugin_config_hash
+        })
+      },
+      {
+        name     = "nvidia"
+        contents = file("${path.module}/templates/nvidia.yaml")
+      }
+    ]
+  ) : []
   control_node_machine_config = {
     machine = {
       network = {
@@ -50,67 +126,12 @@ locals {
         "https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml",
         "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml",
         "https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml",
-        "https://github.com/cert-manager/cert-manager/releases/download/v${local.cert_manager.version}/cert-manager.crds.yaml",
-        "https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v${local.nvidia_device_plugin.version}/deployments/static/nvidia-device-plugin.yml"
+        "https://github.com/cert-manager/cert-manager/releases/download/v${local.cert_manager.version}/cert-manager.crds.yaml"
       ]
-      inlineManifests = [
-        {
-          name = "metallb"
-          contents = templatefile("${path.module}/templates/metallb.yaml.tmpl", {
-            cidr_pool = ["${var.k8s_lb_ip}/32"]
-          })
-        },
-        {
-          name     = "cert-manager"
-          contents = data.helm_template.cert_manager.manifest
-        },
-        {
-          name = "cert-manager-issuer"
-          contents = templatefile("${path.module}/templates/cert-manager.yaml.tmpl", {
-            acme_server           = var.acme_server
-            acme_email            = var.acme_email
-            aws_region            = var.aws_region
-            aws_access_key_id     = var.aws_iam_credentials.access_key_id
-            aws_secret_access_key = var.aws_iam_credentials.secret_access_key
-            hosted_zone_id        = var.aws_route53_zone_id
-            issuer_name           = local.cert_manager.issuer_name
-          })
-        },
-        {
-          name = "traefik-namespace"
-          contents = templatefile("${path.module}/templates/namespace.yaml.tmpl", {
-            namespace = local.traefik.namespace
-          })
-        },
-        {
-          name     = "traefik-crds"
-          contents = data.helm_template.traefik_crds.manifest
-        },
-        {
-          name     = "traefik"
-          contents = data.helm_template.traefik.manifest
-        },
-        {
-          name = "longhorn-namespace"
-          contents = templatefile("${path.module}/templates/namespace.yaml.tmpl", {
-            namespace = local.longhorn.namespace
-          })
-        },
-        {
-          name     = "longhorn"
-          contents = data.helm_template.longhorn.manifest
-        },
-        {
-          name = "nvidia-device-plugin"
-          contents = templatefile("${path.module}/templates/nvidia-device-plugin.yaml.tmpl", {
-            version = local.nvidia_device_plugin.version
-          })
-        },
-        {
-          name     = "nvidia"
-          contents = file("${path.module}/templates/nvidia.yaml")
-        }
-      ]
+      inlineManifests = concat(
+        local.inline_manifests_common,
+        local.inline_manifests_gpu
+      )
     }
   }
   worker_node_machine_config = {
@@ -234,6 +255,10 @@ resource "talos_cluster_kubeconfig" "talos" {
   ]
 }
 
+resource "terraform_data" "gpu_time_slicing_trigger" {
+  input = var.gpu_time_slicing
+}
+
 resource "talos_machine_configuration_apply" "control" {
   count                       = var.vm_config["control"].count
   client_configuration        = talos_machine_secrets.cluster.client_configuration
@@ -252,6 +277,9 @@ resource "talos_machine_configuration_apply" "control" {
   depends_on = [
     proxmox_virtual_environment_vm.talos_control_plane,
   ]
+  lifecycle {
+    replace_triggered_by = [terraform_data.gpu_time_slicing_trigger]
+  }
 }
 
 // see https://registry.terraform.io/providers/siderolabs/talos/0.6.1/docs/resources/machine_configuration_apply
@@ -273,10 +301,13 @@ resource "talos_machine_configuration_apply" "worker" {
   depends_on = [
     proxmox_virtual_environment_vm.talos_worker,
   ]
+  lifecycle {
+    replace_triggered_by = [terraform_data.gpu_time_slicing_trigger]
+  }
 }
 
 resource "talos_machine_configuration_apply" "gpu" {
-  count                       = 1
+  count                       = var.gpu_vm_config.enabled ? 1 : 0
   client_configuration        = talos_machine_secrets.cluster.client_configuration
   machine_configuration_input = data.talos_machine_configuration.gpu.machine_configuration
   endpoint                    = local.gpu_node.address
@@ -294,6 +325,9 @@ resource "talos_machine_configuration_apply" "gpu" {
   depends_on = [
     proxmox_virtual_environment_vm.talos_gpu,
   ]
+  lifecycle {
+    replace_triggered_by = [terraform_data.gpu_time_slicing_trigger]
+  }
 }
 
 resource "talos_machine_bootstrap" "talos" {

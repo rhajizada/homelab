@@ -159,6 +159,24 @@ variable "talos_gpu_vm_config" {
   })
 }
 
+variable "gpu_time_slicing" {
+  description = "Time-slicing configuration for the GPU device plugin"
+  type = object({
+    enabled      = bool
+    product_name = string
+    replicas     = number
+  })
+  default = {
+    enabled      = false
+    product_name = ""
+    replicas     = 0
+  }
+  validation {
+    condition     = var.gpu_time_slicing.enabled == false || (var.gpu_time_slicing.replicas > 0 && var.gpu_time_slicing.product_name != "")
+    error_message = "When GPU time slicing is enabled, both 'product_name' and a positive 'replicas' value are required."
+  }
+}
+
 variable "ubuntu_version" {
   description = "Version of Ubuntu to deploy for VPN/DNS/Samba VMs"
   type        = string

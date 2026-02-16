@@ -13,13 +13,24 @@ spec:
     metadata:
       labels:
         name: nvidia-device-plugin-ds
+%{ if use_config }
+      annotations:
+        checksum/config: "${config_hash}"
+%{ endif }
     spec:
       nodeSelector:
         nvidia.com/gpu.present: "true"
       priorityClassName: "system-node-critical"
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
       containers:
       - image: nvcr.io/nvidia/k8s-device-plugin:v${version}
         name: nvidia-device-plugin-ctr
+%{ if use_config }
+        args: ["--config-file=/config/config.yaml"]
+%{ endif }
         env:
           - name: FAIL_ON_INIT_ERROR
             value: "false"
@@ -30,7 +41,17 @@ spec:
         volumeMounts:
         - name: device-plugin
           mountPath: /var/lib/kubelet/device-plugins
+%{ if use_config }
+        - name: config
+          mountPath: /config
+          readOnly: true
+%{ endif }
       volumes:
       - name: device-plugin
         hostPath:
           path: /var/lib/kubelet/device-plugins
+%{ if use_config }
+      - name: config
+        configMap:
+          name: nvidia-device-plugin-config
+%{ endif }

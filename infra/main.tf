@@ -70,6 +70,7 @@ module "talos" {
   k8s_version             = var.k8s_version
   vm_config               = var.talos_vm_config
   gpu_vm_config           = var.talos_gpu_vm_config
+  gpu_time_slicing        = var.gpu_time_slicing
   aws_iam_credentials     = module.route53.talos_iam_user
   aws_region              = module.route53.aws_region
   aws_route53_zone_id     = module.route53.route_53_zone_id

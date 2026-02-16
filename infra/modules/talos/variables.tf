@@ -215,6 +215,20 @@ variable "gpu_vm_config" {
   }
 }
 
+variable "gpu_time_slicing" {
+  description = "Time-slicing configuration for the GPU device plugin"
+  type = object({
+    enabled      = bool
+    product_name = string
+    replicas     = number
+  })
+  default = {
+    enabled      = false
+    product_name = ""
+    replicas     = 0
+  }
+}
+
 variable "aws_region" {
   description = "AWS region"
   type        = string
