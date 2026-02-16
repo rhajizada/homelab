@@ -89,6 +89,13 @@ locals {
       }
     }
 
+    samba_storage = {
+      class        = "smb-private"
+      access_modes = ["ReadWriteMany"]
+      size         = "128Gi"
+      mount_path   = "/scr"
+    }
+
     groups = ["llamero-admins", "llamero-users"]
   }
 }
@@ -894,6 +901,24 @@ resource "kubernetes_persistent_volume_claim" "ollama_pvc" {
   }
 }
 
+resource "kubernetes_persistent_volume_claim" "ollama_samba" {
+  metadata {
+    name      = "ollama-samba"
+    namespace = local.llamero.namespace
+  }
+
+  spec {
+    storage_class_name = local.llamero.samba_storage.class
+    access_modes       = local.llamero.samba_storage.access_modes
+
+    resources {
+      requests = {
+        storage = local.llamero.samba_storage.size
+      }
+    }
+  }
+}
+
 resource "kubernetes_deployment" "ollama" {
   metadata {
     name      = "ollama"
@@ -945,12 +970,24 @@ resource "kubernetes_deployment" "ollama" {
             name       = "ollama-data"
             mount_path = "/root/.ollama"
           }
+
+          volume_mount {
+            name       = "ollama-samba"
+            mount_path = local.llamero.samba_storage.mount_path
+          }
         }
 
         volume {
           name = "ollama-data"
           persistent_volume_claim {
             claim_name = kubernetes_persistent_volume_claim.ollama_pvc.metadata[0].name
+          }
+        }
+
+        volume {
+          name = "ollama-samba"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.ollama_samba.metadata[0].name
           }
         }
       }
