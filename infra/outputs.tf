@@ -92,5 +92,5 @@ output "samba_admin_credentials" {
 output "devbox_node_credentials" {
   description = "Devbox node credentials"
   sensitive   = true
-  value       = module.devbox.ssh_credentials
+  value       = var.devbox_enabled ? module.devbox[0].ssh_credentials : null
 }

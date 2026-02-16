@@ -95,11 +95,15 @@ module "samba" {
 }
 
 module "devbox" {
-  source                  = "./modules/devbox"
+  count  = var.devbox_enabled ? 1 : 0
+  source = "./modules/devbox"
+  providers = {
+    proxmox = proxmox
+  }
+
   cluster_name            = var.cluster_name
   cluster_network_gateway = var.cluster_network_gateway
   environment             = var.environment
-  proxmox_endpoint        = var.proxmox_endpoint
   proxmox_node_name       = var.proxmox_storage_node
   ip_address              = local.devbox_node_ip
   vm_config               = var.devbox_vm_config

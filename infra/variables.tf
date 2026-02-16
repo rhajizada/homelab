@@ -357,6 +357,12 @@ variable "samba_data_disk" {
   }
 }
 
+variable "devbox_enabled" {
+  description = "Whether to provision the Devbox VM"
+  type        = bool
+  default     = true
+}
+
 variable "devbox_vm_config" {
   description = "Configuration for Dev VM"
   type = object({
