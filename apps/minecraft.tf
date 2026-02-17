@@ -317,4 +317,3 @@ resource "kubernetes_service" "gate" {
     }
   }
 }
-

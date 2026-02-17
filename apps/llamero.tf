@@ -78,10 +78,8 @@ locals {
         "gemma3:12b",
         "gpt-oss:20b",
         "llama3.1:8b",
-        "llama3.2:3b",
         "llava:7b",
-        "nomic-embed-text",
-        "qwen3:14b"
+        "nomic-embed-text"
       ]
       env = {
         OLLAMA_CONTEXT_LENGTH = 16384
