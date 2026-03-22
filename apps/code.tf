@@ -2,7 +2,7 @@ locals {
   vscode = {
     namespace    = "vscode"
     host         = "code.${var.base_domain}"
-    image        = "gitpod/openvscode-server:1.105.1"
+    image        = "gitpod/openvscode-server:1.105.1" # latest version 1.109.5
     storage_size = "32Gi"
     resources = {
       requests = {

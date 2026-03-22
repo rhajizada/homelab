@@ -2,7 +2,7 @@ locals {
   dcgm = {
     repository = "https://nvidia.github.io/dcgm-exporter/helm-charts"
     chart      = "dcgm-exporter"
-    version    = "4.1.0"
+    version    = "4.1.0" # latest version is 4.5.2
     namespace  = "dcgm"
   }
 }

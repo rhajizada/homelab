@@ -2,7 +2,7 @@ locals {
   authentik = {
     repository = "https://charts.goauthentik.io/"
     chart      = "authentik"
-    version    = "2025.10.2"
+    version    = "2025.10.2" # latest version 2026.2.1
     namespace  = "authentik"
 
     host = "authentik.${var.base_domain}"

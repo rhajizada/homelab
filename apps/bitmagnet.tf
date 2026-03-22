@@ -2,7 +2,7 @@ locals {
   bitmagnet = {
     namespace      = "bitmagnet"
     host           = "bitmagnet.${var.base_domain}"
-    image          = "ghcr.io/bitmagnet-io/bitmagnet:latest"
+    image          = "ghcr.io/bitmagnet-io/bitmagnet:latest" # latest version 0.10.0
     postgres_image = "postgres:16-alpine"
     storage = {
       config   = "2Gi"
