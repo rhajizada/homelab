@@ -2,7 +2,7 @@ locals {
   argocd = {
     repository = "https://argoproj.github.io/argo-helm"
     chart      = "argo/argo-cd"
-    version    = "8.1.3" # latst version 9.4.15
+    version    = "9.4.15"
     namespace  = "argocd"
     host       = "argocd.${var.base_domain}"
     groups     = ["argocd-admins", "argocd-viewers"]
