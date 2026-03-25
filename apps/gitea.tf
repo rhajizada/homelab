@@ -47,9 +47,9 @@ resource "authentik_property_mapping_provider_scope" "gitea" {
 gitea_claims = {}
 gitea_claims["gitea"]= "restricted"
 
-if request.user.ak_groups.filter(name="git-users").exists():
+if request.user.groups.filter(name="git-users").exists():
     gitea_claims["gitea"]= "user"
-if request.user.ak_groups.filter(name="git-admins").exists():
+if request.user.groups.filter(name="git-admins").exists():
     gitea_claims["gitea"]= "admin"
 
 return gitea_claims
