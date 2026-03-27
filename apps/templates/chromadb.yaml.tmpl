@@ -1,6 +1,10 @@
 replicaCount: 1
 kind: Deployment
 
+image:
+  repository: ghcr.io/chroma-core/chroma
+  tag: "${image_tag}"
+
 env:
   - name: ANONYMIZED_TELEMETRY
     value: "False"

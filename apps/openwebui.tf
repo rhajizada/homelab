@@ -2,7 +2,7 @@ locals {
   openwebui = {
     repository = "https://helm.openwebui.com"
     chart      = "open-webui"
-    version    = "8.18.0"
+    version    = "12.13.0"
     namespace  = "openwebui"
 
     host         = "chat.${var.base_domain}"
@@ -12,6 +12,7 @@ locals {
     repository   = "https://infracloudio.github.io/charts"
     chart        = "chromadb"
     version      = "0.1.4"
+    image_tag    = "1.5.2"
     storage_size = "16Gi"
   }
   tika = {
@@ -145,6 +146,7 @@ resource "helm_release" "chromadb" {
 
   values = [
     templatefile("${path.module}/templates/chromadb.yaml.tmpl", {
+      image_tag    = local.chromadb.image_tag
       storage_size = local.chromadb.storage_size
     })
   ]
@@ -197,7 +199,6 @@ resource "helm_release" "openwebui" {
       storage_size         = local.openwebui.storage_size
       openid_provider_url  = "https://${local.authentik.host}/application/o/openwebui-slug/.well-known/openid-configuration"
       openid_provider_name = "authentik"
-      openid_redirect_uri  = "https://${local.openwebui.host}/oauth/oidc/callback"
     })
   ]
 }

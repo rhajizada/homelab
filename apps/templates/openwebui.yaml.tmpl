@@ -1,15 +1,38 @@
+fullnameOverride: open-webui
+
 ollama:
   enabled: false
 
 ollamaUrls: ["${ollama_url}"]
 
+enableOpenaiApi: true
+openaiBaseApiUrl: ""
+openaiApiKey: ""
+
+sso:
+  enabled: true
+  enableSignup: true
+  enableRoleManagement: true
+  oidc:
+    enabled: true
+    providerUrl: "${openid_provider_url}"
+    providerName: "${openid_provider_name}"
+    clientExistingSecret: openwebui-authentik-secret
+    clientIdExistingSecretKey: client_id
+    clientExistingSecretKey: client_secret
+  roleManagement:
+    rolesClaim: groups
+    allowedRoles: "openwebui-users,openwebui-admins"
+    adminRoles: "openwebui-admins"
+
+serviceAccount:
+  enable: true
+  create: false
+  name: existing-sa
+
 extraEnvVars:
   - name: ENV
     value: "dev"
-  - name: ENABLE_OPENAI_API
-    value: "true"
-  - name: OPENAI_API_BASE_URL
-    value: "http://open-webui-pipelines.openwebui.svc.cluster.local:9099"
   - name: OPENAI_API_KEY
     valueFrom:
       secretKeyRef:
@@ -21,32 +44,6 @@ extraEnvVars:
     value: "false"
   - name: ENABLE_PASSWORD_AUTH
     value: "false"
-  - name: ENABLE_OAUTH_SIGNUP
-    value: "true"
-  - name: ENABLE_OAUTH_ROLE_MANAGEMENT
-    value: "true"
-  - name: "OAUTH_ALLOWED_ROLES"
-    value: "openwebui-users,openwebui-admins"
-  - name: "OAUTH_ROLES_CLAIM"
-    value: "groups"
-  - name: "OAUTH_ADMIN_ROLES"
-    value: "openwebui-admins"
-  - name: OAUTH_CLIENT_ID
-    valueFrom:
-      secretKeyRef:
-        name: openwebui-authentik-secret
-        key: client_id
-  - name: OAUTH_CLIENT_SECRET
-    valueFrom:
-      secretKeyRef:
-        name: openwebui-authentik-secret
-        key: client_secret
-  - name: OPENID_PROVIDER_URL
-    value: "${openid_provider_url}"
-  - name: OAUTH_PROVIDER_NAME
-    value: "${openid_provider_name}"
-  - name: OPENID_REDIRECT_URI
-    value: "${openid_redirect_uri}"
   - name: TIKA_SERVER_URL
     value: "http://open-webui-tika.openwebui.svc.cluster.local:9998"
   - name: ENABLE_DIRECT_CONNECTIONS
@@ -67,8 +64,6 @@ extraEnvVars:
     value: "ollama"
   - name: RAG_EMBEDDING_MODEL
     value: "nomic-embed-text"
-  - name: REDIS_URL
-    value: "redis://open-webui-redis.openwebui.svc.cluster.local:6379/0"
   - name: CONTENT_EXTRACTION_ENGINE
     value: "tika"
   - name: CHROMA_HTTP_HOST
@@ -81,19 +76,9 @@ extraEnvVars:
 
 websocket:
   enabled: true
-  url: redis://open-webui-redis.openwebui.svc.cluster.local:6379/1
+  url: redis://open-webui-redis.openwebui.svc.cluster.local:6379/0
   redis:
     enabled: true
-    name: open-webui-redis
-
-pipelines:
-  enabled: true
-  extraEnvVars:
-    - name: PIPELINES_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: openwebui-pipelines-secret
-          key: key
 
 ingress:
   enabled: true
@@ -107,4 +92,17 @@ ingress:
 
 persistence:
   enabled: true
+  existingClaim: open-webui
   size: ${storage_size}
+
+pipelines:
+  enabled: true
+  fullnameOverride: open-webui-pipelines
+  persistence:
+    existingClaim: open-webui-pipelines
+  extraEnvVars:
+    - name: PIPELINES_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: openwebui-pipelines-secret
+          key: key
