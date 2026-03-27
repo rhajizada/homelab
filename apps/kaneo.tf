@@ -90,10 +90,6 @@ resource "authentik_provider_oauth2" "kaneo" {
   allowed_redirect_uris = [
     {
       matching_mode = "strict"
-      url           = "http://localhost:8080/api/auth/oauth2/callback/custom"
-    },
-    {
-      matching_mode = "strict"
       url           = "https://${local.kaneo.host}/api/auth/oauth2/callback/custom"
     }
   ]
