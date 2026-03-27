@@ -2,7 +2,7 @@ locals {
   harbor = {
     repository = "https://helm.goharbor.io"
     chart      = "harbor"
-    version    = "1.18.0" # latest version 1.18.3
+    version    = "1.18.3"
     namespace  = "harbor"
 
     host         = "harbor.${var.base_domain}"
