@@ -105,10 +105,6 @@ resource "authentik_provider_oauth2" "karakeep" {
   allowed_redirect_uris = [
     {
       matching_mode = "strict"
-      url           = "http://localhost:3000/api/auth/callback/custom"
-    },
-    {
-      matching_mode = "strict"
       url           = "https://${local.karakeep.host}/api/auth/callback/custom"
     }
   ]
