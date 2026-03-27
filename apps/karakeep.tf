@@ -4,7 +4,7 @@ locals {
     host      = "karakeep.${var.base_domain}"
 
     web = {
-      image = "ghcr.io/karakeep-app/karakeep:0.30.0" # latest version is 0.31.0
+      image = "ghcr.io/karakeep-app/karakeep:0.31.0"
       resources = {
         requests = {
           cpu    = "500m"
@@ -32,7 +32,7 @@ locals {
     }
 
     meilisearch = {
-      image = "getmeili/meilisearch:v1.13.3"
+      image = "getmeili/meilisearch:v1.40.0"
       resources = {
         requests = {
           cpu    = "500m"
