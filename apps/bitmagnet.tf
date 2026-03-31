@@ -4,6 +4,17 @@ locals {
     host           = "bitmagnet.${var.base_domain}"
     image          = "ghcr.io/bitmagnet-io/bitmagnet:v0.10.0"
     postgres_image = "postgres:16-alpine"
+    crawler = {
+      save_files_threshold = 25
+    }
+    cleanup = {
+      schedule            = "17 3 * * 0"
+      retention_days      = 120
+      max_seeders         = 0
+      delete_batch_size   = 5000
+      successful_runs_ttl = 3
+      failed_runs_ttl     = 3
+    }
     storage = {
       config   = "2Gi"
       postgres = "64Gi"
@@ -205,6 +216,130 @@ resource "kubernetes_service" "bitmagnet_postgres" {
   }
 }
 
+resource "kubernetes_cron_job_v1" "bitmagnet_postgres_cleanup" {
+  metadata {
+    name      = "bitmagnet-postgres-cleanup"
+    namespace = local.bitmagnet.namespace
+  }
+
+  spec {
+    schedule                      = local.bitmagnet.cleanup.schedule
+    concurrency_policy            = "Forbid"
+    successful_jobs_history_limit = local.bitmagnet.cleanup.successful_runs_ttl
+    failed_jobs_history_limit     = local.bitmagnet.cleanup.failed_runs_ttl
+
+    job_template {
+      metadata {}
+
+      spec {
+        template {
+          metadata {}
+
+          spec {
+            security_context {
+              run_as_non_root = true
+              run_as_user     = 70
+              run_as_group    = 70
+              fs_group        = 70
+
+              seccomp_profile {
+                type = "RuntimeDefault"
+              }
+            }
+
+            restart_policy = "Never"
+
+            container {
+              name  = "postgres-cleanup"
+              image = local.bitmagnet.postgres_image
+
+              security_context {
+                allow_privilege_escalation = false
+                run_as_non_root            = true
+
+                capabilities {
+                  drop = ["ALL"]
+                }
+              }
+
+              command = ["/bin/sh", "-ec"]
+              args = [<<-EOT
+                export PGPASSWORD="$POSTGRES_PASSWORD"
+                export PGOPTIONS="-c max_parallel_maintenance_workers=0 -c max_parallel_workers_per_gather=0"
+
+                while true; do
+                  deleted="$(psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tA <<SQL
+                WITH doomed AS (
+                  SELECT t.info_hash
+                  FROM torrents t
+                  WHERE t.created_at < now() - make_interval(days => ${local.bitmagnet.cleanup.retention_days})
+                    AND EXISTS (
+                      SELECT 1
+                      FROM torrents_torrent_sources tts
+                      WHERE tts.info_hash = t.info_hash
+                        AND tts.seeders IS NOT NULL
+                    )
+                    AND NOT EXISTS (
+                      SELECT 1
+                      FROM torrents_torrent_sources tts
+                      WHERE tts.info_hash = t.info_hash
+                        AND COALESCE(tts.seeders, 0) > ${local.bitmagnet.cleanup.max_seeders}
+                    )
+                  ORDER BY t.updated_at NULLS LAST
+                  LIMIT ${local.bitmagnet.cleanup.delete_batch_size}
+                ), deleted AS (
+                  DELETE FROM torrents t
+                  USING doomed d
+                  WHERE t.info_hash = d.info_hash
+                  RETURNING 1
+                )
+                SELECT COUNT(*) FROM deleted;
+                SQL
+                )"
+
+                  [ "$deleted" = "0" ] && break
+                  sleep 1
+                done
+
+                psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE torrents"
+                psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE torrents_torrent_sources"
+                psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE torrent_files"
+                psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE torrent_contents"
+              EOT
+              ]
+
+              env {
+                name  = "POSTGRES_HOST"
+                value = kubernetes_service.bitmagnet_postgres.metadata[0].name
+              }
+
+              env {
+                name  = "POSTGRES_DB"
+                value = "bitmagnet"
+              }
+
+              env {
+                name  = "POSTGRES_USER"
+                value = "postgres"
+              }
+
+              env {
+                name = "POSTGRES_PASSWORD"
+                value_from {
+                  secret_key_ref {
+                    name = kubernetes_secret.bitmagnet_postgres.metadata[0].name
+                    key  = "POSTGRES_PASSWORD"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 resource "kubernetes_deployment" "bitmagnet" {
   depends_on = [
     kubernetes_service.bitmagnet_postgres,
@@ -276,6 +411,10 @@ resource "kubernetes_deployment" "bitmagnet" {
           env {
             name  = "POSTGRES_DB"
             value = "bitmagnet"
+          }
+          env {
+            name  = "DHT_CRAWLER_SAVE_FILES_THRESHOLD"
+            value = tostring(local.bitmagnet.crawler.save_files_threshold)
           }
           resources {
             limits   = local.bitmagnet.resources.limits
