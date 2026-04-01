@@ -28,6 +28,8 @@ global:
 server:
   metrics:
     enabled: true
+    serviceMonitor:
+      enabled: true
   ingress:
     enabled: true
     ingressClassName: traefik
@@ -40,3 +42,9 @@ server:
       - secretName: authentik-tls
         hosts:
           - ${host}
+
+worker:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true

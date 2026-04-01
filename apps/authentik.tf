@@ -74,6 +74,25 @@ resource "helm_release" "authentik" {
   ]
 }
 
+resource "kubernetes_config_map" "authentik_grafana_dashboard" {
+  metadata {
+    name      = "authentik-grafana-dashboard"
+    namespace = local.monitoring.namespace
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "authentik-dashboard.json" = file("${path.module}/templates/authentik-dashboard.json")
+  }
+
+  depends_on = [
+    helm_release.kube_prometheus_stack,
+    helm_release.authentik,
+  ]
+}
+
 provider "authentik" {
   url      = "https://${local.authentik.host}"
   token    = random_password.authentik_bootstrap_token.result
