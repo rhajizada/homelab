@@ -2,7 +2,7 @@ locals {
   homarr = {
     repository = "https://homarr-labs.github.io/charts/"
     chart      = "homarr"
-    version    = "8.14.1"
+    version    = "8.15.1"
     namespace  = "homarr"
 
     admin = {
