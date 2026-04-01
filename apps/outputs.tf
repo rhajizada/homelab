@@ -17,7 +17,7 @@ output "gitea_admin_credentials" {
 output "grafana_admin_credentials" {
   description = "grafana admin user credentials"
   value = {
-    username = local.grafana.admin.username
+    username = local.monitoring.grafana.admin.username
     password = random_password.grafana_admin_password.result
   }
   sensitive = true

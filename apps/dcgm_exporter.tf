@@ -33,3 +33,21 @@ resource "helm_release" "dcgm" {
     file("${path.module}/templates/dcgm-exporter.yaml.tmpl")
   ]
 }
+
+resource "kubernetes_config_map" "dcgm_grafana_dashboard" {
+  metadata {
+    name      = "dcgm-grafana-dashboard"
+    namespace = local.monitoring.namespace
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "dcgm-dashboard.json" = file("${path.module}/templates/dcgm-dashboard.json")
+  }
+
+  depends_on = [
+    helm_release.kube_prometheus_stack,
+  ]
+}

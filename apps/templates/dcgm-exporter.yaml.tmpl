@@ -8,10 +8,6 @@ nodeSelector:
 tolerations:
   - operator: Exists
 
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "9400"
-
 service:
   enable: true
   type: ClusterIP
@@ -19,4 +15,5 @@ service:
   address: ":9400"
 
 serviceMonitor:
-  enabled: false
+  enabled: true
+  interval: 15s
