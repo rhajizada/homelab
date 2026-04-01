@@ -9,7 +9,7 @@ locals {
     }
 
     api = {
-      image = "ghcr.io/usekaneo/api:2.1.23" # latest version 2.3.11
+      image = "ghcr.io/usekaneo/api:2.4.4"
       resources = {
         requests = {
           cpu    = "250m"
@@ -23,7 +23,7 @@ locals {
     }
 
     web = {
-      image = "ghcr.io/usekaneo/web:2.1.23"
+      image = "ghcr.io/usekaneo/web:2.4.4"
       resources = {
         requests = {
           cpu    = "250m"
