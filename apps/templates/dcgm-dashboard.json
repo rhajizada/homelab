@@ -149,9 +149,7 @@
       "id": 14,
       "options": {
         "fieldOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "defaults": {
             "color": {
               "mode": "thresholds"
@@ -303,9 +301,7 @@
       "links": [],
       "options": {
         "fieldOptions": {
-          "calcs": [
-            "sum"
-          ],
+          "calcs": ["sum"],
           "defaults": {
             "color": {
               "mode": "thresholds"
@@ -813,7 +809,7 @@
     ]
   },
   "timezone": "",
-  "title": "NVIDIA DCGM Exporter Dashboard",
+  "title": "NVIDIA DCGM",
   "uid": "Oxed_c6Wz",
   "variables": {
     "list": []

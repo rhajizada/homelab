@@ -141,3 +141,22 @@ resource "helm_release" "harbor" {
     })
   ]
 }
+
+resource "kubernetes_config_map" "harbor_grafana_dashboard" {
+  metadata {
+    name      = "harbor-grafana-dashboard"
+    namespace = local.monitoring.namespace
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "harbor-dashboard.json" = file("${path.module}/templates/harbor-dashboard.json")
+  }
+
+  depends_on = [
+    helm_release.kube_prometheus_stack,
+    helm_release.harbor,
+  ]
+}
