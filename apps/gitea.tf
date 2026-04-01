@@ -2,8 +2,12 @@ locals {
   gitea = {
     repository = "https://dl.gitea.com/charts/"
     chart      = "gitea"
-    version    = "10.6.0" # lattest version 12.5.0
+    version    = "12.5.0"
     namespace  = "gitea"
+    actions = {
+      chart   = "actions"
+      version = "0.0.3"
+    }
 
     host = "git.${var.base_domain}"
     admin = {
@@ -38,6 +42,10 @@ resource "random_password" "gitea_client_id" {
 resource "random_password" "gitea_client_secret" {
   length  = 64
   special = true
+}
+
+resource "random_id" "gitea_runner_registration_token" {
+  byte_length = 24
 }
 
 resource "authentik_property_mapping_provider_scope" "gitea" {
@@ -126,13 +134,28 @@ resource "kubernetes_secret" "gitea_admin_secret" {
   type = "Opaque"
 }
 
+resource "kubernetes_secret" "gitea_actions_secret" {
+  metadata {
+    name      = "gitea-actions-secret"
+    namespace = local.gitea.namespace
+  }
+
+  data = {
+    token = random_id.gitea_runner_registration_token.hex
+  }
+
+  type = "Opaque"
+}
+
 resource "helm_release" "gitea" {
   depends_on = [
     kubernetes_namespace.gitea_namespace,
     kubernetes_secret.gitea_admin_secret,
     kubernetes_secret.gitea_authentik_secret,
+    kubernetes_secret.gitea_actions_secret,
     authentik_provider_oauth2.gitea,
-  authentik_application.gitea]
+    authentik_application.gitea
+  ]
 
   name       = "gitea"
   repository = local.gitea.repository
@@ -151,6 +174,32 @@ resource "helm_release" "gitea" {
       host                   = local.gitea.host
       cert_issuer            = var.cluster_cert_issuer
       storage_size           = local.gitea.storage_size
+      runner_token_secret    = kubernetes_secret.gitea_actions_secret.metadata[0].name
+      runner_token_key       = "token"
+    })
+  ]
+}
+
+resource "helm_release" "gitea_actions" {
+  depends_on = [
+    kubernetes_namespace.gitea_namespace,
+    kubernetes_secret.gitea_actions_secret,
+    helm_release.gitea
+  ]
+
+  name       = "gitea-actions"
+  repository = local.gitea.repository
+  chart      = local.gitea.actions.chart
+  version    = local.gitea.actions.version
+  namespace  = local.gitea.namespace
+
+  timeout = 600
+
+  values = [
+    templatefile("${path.module}/templates/gitea-actions.yaml.tmpl", {
+      host              = local.gitea.host
+      token_secret_name = kubernetes_secret.gitea_actions_secret.metadata[0].name
+      token_secret_key  = "token"
     })
   ]
 }

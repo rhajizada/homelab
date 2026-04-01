@@ -12,6 +12,8 @@ gitea:
   admin:
     existingSecret: gitea-admin-secret
   config:
+    actions:
+      ENABLED: true
     server:
       DISABLE_SSH: true
       DOMAIN: ${host}
@@ -34,6 +36,14 @@ gitea:
       ENABLED: true
   metrics:
     enabled: true
+
+deployment:
+  env:
+    - name: GITEA_RUNNER_REGISTRATION_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: ${runner_token_secret}
+          key: ${runner_token_key}
 
 ingress:
   enabled: true
@@ -61,16 +71,14 @@ persistence:
   accessModes:
     - ReadWriteMany
 
-actions:
-  enabled: true
-  statefulset:
-    dind:
-      securityContext:
-        privileged: true
-  provisioning:
-    enabled: true
-    labels:
-      ubuntu-latest: "node16-bullseye"
-      ubuntu-22.04: "node16-bullseye"
-      ubuntu-20.04: "node16-bullseye"
-      ubuntu-18.04: "node16-buster"
+postgresql-ha:
+  postgresql:
+    headlessWithNotReadyAddresses: true
+    image:
+      tag: 16.3.0-debian-12-r20
+    livenessProbe:
+      enabled: false
+    readinessProbe:
+      enabled: false
+    startupProbe:
+      enabled: false

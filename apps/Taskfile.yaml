@@ -131,6 +131,6 @@ tasks:
         msg: "StatefulSet 'gitea-act-runner' does not exist in the 'gitea' namespace."
     cmds:
       - |
-        for pod in $(kubectl get pods -l app=gitea-act-runner -n gitea -o name); do
+        for pod in $(kubectl get pods -l app.kubernetes.io/name=actions-act-runner,app.kubernetes.io/instance=gitea-actions -n gitea -o name); do
           kubectl exec -i "$pod" -n gitea -- sh -s < scripts/gitea-act-runner/setup.sh
         done

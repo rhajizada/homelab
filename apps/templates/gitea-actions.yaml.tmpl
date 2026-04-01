@@ -1,0 +1,26 @@
+enabled: true
+fullnameOverride: gitea
+
+existingSecret: ${token_secret_name}
+existingSecretKey: ${token_secret_key}
+giteaRootURL: https://${host}
+
+statefulset:
+  replicas: 1
+  actRunner:
+    config: |
+      log:
+        level: info
+      cache:
+        enabled: false
+      container:
+        require_docker: true
+        docker_host: unix:///var/run/docker.sock
+        docker_timeout: 300s
+      runner:
+        labels:
+          - "ubuntu-latest:docker://gitea/runner-images:ubuntu-latest"
+          - "ubuntu-24.04:docker://gitea/runner-images:ubuntu-24.04"
+          - "ubuntu-22.04:docker://gitea/runner-images:ubuntu-22.04"
+          - "ubuntu-20.04:docker://gitea/runner-images:ubuntu-20.04"
+          - "debian-bookworm:docker://node:20-bookworm"
