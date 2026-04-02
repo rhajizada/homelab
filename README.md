@@ -173,14 +173,16 @@ git clone https://github.com/yourusername/homelab.git
 cd homelab
 ```
 
-- **Create a `.env` file:** Configure variables directly or use the following parameters:
+- **Create a `.env` file:**
+  Configure variables directly or use the following parameters:
 
 ```
 PROXMOX_VE_USERNAME="root@pam"
 PROXMOX_VE_PASSWORD=""
 ```
 
-- **Install `terraform` or `tofu`:** Configure the `TF` variable in `Taskfile.yaml` accordingly.
+- **Install `terraform` or `tofu`:**
+  Configure the `TF` variable in `Taskfile.yaml` accordingly.
 - **Set Up the `terraform` environment:**
 
 ```
