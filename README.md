@@ -153,7 +153,6 @@ This project leverages [Taskfile](https://github.com/go-task/task) to streamline
 - **apps:plan:** Show changes required by the current configuration
 - **apps:scale-runners:** Scale Gitea action runners to the specified count (0-10)
 - **apps:secrets:** Show bootstrap/admin credentials for a specified app
-- **apps:setup-runners:** Run setup script on gitea runners
 - **apps:validate:** Check whether the configuration is valid
 
 ## AWS Integration
@@ -167,29 +166,29 @@ This homelab configuration integrates with AWS for two key purposes:
 
 ## Getting Started
 
-1. **Clone the Repository:**
+**Clone the Repository:**
 
-   ```sh
-   git clone https://github.com/yourusername/homelab.git
-   cd homelab
-   ```
+```sh
+git clone https://github.com/yourusername/homelab.git
+cd homelab
+```
 
-2. Create a .env file (or configure variables directly) with the required parameters:
+- **Create a `.env` file:** Configure variables directly or use the following parameters:
 
 ```
 PROXMOX_VE_USERNAME="root@pam"
 PROXMOX_VE_PASSWORD=""
 ```
 
-3. Install `terraform` or `tofu` (please configure `TF` variable in `Taskfile.yaml` accordingly)
-4. Setup `terraform` environment:
+- **Install `terraform` or `tofu`:** Configure the `TF` variable in `Taskfile.yaml` accordingly.
+- **Set Up the `terraform` environment:**
 
 ```
 task infra:init
 task apps:init
 ```
 
-5. Deploy:
+- **Deploy:**
 
 ```
 task infra:apply

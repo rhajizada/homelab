@@ -123,14 +123,3 @@ tasks:
         kubectl scale statefulset gitea-act-runner --replicas={{.count}} -n gitea
     vars:
       count: '{{.count | default ""}}'
-
-  setup-runners:
-    desc: "Run setup script on gitea runners"
-    preconditions:
-      - sh: "kubectl get statefulset gitea-act-runner -n gitea &> /dev/null"
-        msg: "StatefulSet 'gitea-act-runner' does not exist in the 'gitea' namespace."
-    cmds:
-      - |
-        for pod in $(kubectl get pods -l app.kubernetes.io/name=actions-act-runner,app.kubernetes.io/instance=gitea-actions -n gitea -o name); do
-          kubectl exec -i "$pod" -n gitea -- sh -s < scripts/gitea-act-runner/setup.sh
-        done
