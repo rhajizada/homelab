@@ -74,7 +74,7 @@ resource "authentik_application" "harbor" {
   name              = "Harbor"
   slug              = "harbor-slug"
   protocol_provider = authentik_provider_oauth2.harbor.id
-  meta_icon         = "https://simpleicons.org/icons/harbor.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/harbor.svg"
 }
 
 resource "kubernetes_secret" "harbor_admin_secret" {

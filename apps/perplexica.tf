@@ -33,7 +33,7 @@ resource "authentik_application" "perplexica" {
   name              = "Perplexica"
   slug              = "perplexica-slug"
   protocol_provider = authentik_provider_proxy.perplexica.id
-  meta_icon         = "https://simpleicons.org/icons/perplexity.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/perplexity-dark.svg"
 }
 
 resource "authentik_group" "perplexica_users" {

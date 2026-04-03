@@ -87,7 +87,7 @@ resource "authentik_application" "grafana" {
   name              = "Grafana"
   slug              = "grafana-slug"
   protocol_provider = authentik_provider_oauth2.grafana.id
-  meta_icon         = "https://simpleicons.org/icons/grafana.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grafana.svg"
 }
 
 resource "kubernetes_secret" "grafana_admin_secret" {

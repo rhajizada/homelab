@@ -45,7 +45,7 @@ resource "authentik_application" "bitmagnet" {
   name              = "bitmagnet"
   slug              = "bitmagnet-slug"
   protocol_provider = authentik_provider_proxy.bitmagnet.id
-  meta_icon         = "https://simpleicons.org/icons/bittorrent.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/bitmagnet.svg"
 }
 
 resource "authentik_group" "bitmagnet_users" {

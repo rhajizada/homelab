@@ -156,7 +156,7 @@ resource "authentik_application" "llamero" {
   name              = "Llamero"
   slug              = "llamero-slug"
   protocol_provider = authentik_provider_oauth2.llamero.id
-  meta_icon         = "https://simpleicons.org/icons/ollama.svg"
+  meta_icon         = "https://llamero.solocuplabs.com/assets/icons/favicons/icon-1024.png"
 }
 
 resource "tls_private_key" "llamero_jwt" {

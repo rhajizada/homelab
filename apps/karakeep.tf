@@ -122,7 +122,7 @@ resource "authentik_application" "karakeep" {
   name              = "karakeep"
   slug              = "karakeep-slug"
   protocol_provider = authentik_provider_oauth2.karakeep.id
-  meta_icon         = "https://simpleicons.org/icons/keeper.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/karakeep.svg"
 }
 
 resource "kubernetes_secret" "karakeep_app" {

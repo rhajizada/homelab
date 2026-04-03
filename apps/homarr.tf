@@ -74,7 +74,7 @@ resource "authentik_application" "homarr" {
   name              = "homarr"
   slug              = "homarr-slug"
   protocol_provider = authentik_provider_oauth2.homarr.id
-  meta_icon         = "https://simpleicons.org/icons/homarr.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/homarr.svg"
 }
 
 resource "kubernetes_secret" "homarr_db_encryption_key_secret" {

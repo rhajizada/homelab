@@ -95,7 +95,7 @@ resource "authentik_application" "gitea" {
   name              = "Gitea"
   slug              = "gitea-slug"
   protocol_provider = authentik_provider_oauth2.gitea.id
-  meta_icon         = "https://simpleicons.org/icons/gitea.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/gitea.svg"
 }
 
 
@@ -149,6 +149,7 @@ resource "kubernetes_secret" "gitea_actions_secret" {
 
 resource "helm_release" "gitea" {
   depends_on = [
+    helm_release.kube_prometheus_stack,
     kubernetes_namespace.gitea_namespace,
     kubernetes_secret.gitea_admin_secret,
     kubernetes_secret.gitea_authentik_secret,
@@ -201,5 +202,24 @@ resource "helm_release" "gitea_actions" {
       token_secret_name = kubernetes_secret.gitea_actions_secret.metadata[0].name
       token_secret_key  = "token"
     })
+  ]
+}
+
+resource "kubernetes_config_map" "gitea_grafana_dashboard" {
+  metadata {
+    name      = "gitea-grafana-dashboard"
+    namespace = local.monitoring.namespace
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "gitea-dashboard.json" = file("${path.module}/templates/gitea-dashboard.json")
+  }
+
+  depends_on = [
+    helm_release.kube_prometheus_stack,
+    helm_release.gitea,
   ]
 }

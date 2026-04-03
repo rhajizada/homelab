@@ -58,7 +58,7 @@ resource "authentik_application" "transmission" {
   name              = "transmission"
   slug              = "transmission"
   protocol_provider = authentik_provider_proxy.transmission.id
-  meta_icon         = "https://simpleicons.org/icons/transmission.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/transmission.svg"
 }
 
 resource "authentik_group" "transmission_users" {

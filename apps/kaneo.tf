@@ -107,7 +107,7 @@ resource "authentik_application" "kaneo" {
   name              = "kaneo"
   slug              = "kaneo-slug"
   protocol_provider = authentik_provider_oauth2.kaneo.id
-  meta_icon         = "https://simpleicons.org/icons/jira.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/kaneo.svg"
 }
 
 resource "kubernetes_secret" "kaneo_app" {

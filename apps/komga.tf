@@ -104,6 +104,7 @@ resource "authentik_application" "komga" {
   name              = "Komga"
   slug              = "komga-slug"
   protocol_provider = authentik_provider_oauth2.komga.id
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/komga.svg"
 }
 
 resource "authentik_policy_binding" "komga_access" {

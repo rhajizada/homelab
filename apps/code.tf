@@ -31,7 +31,7 @@ resource "authentik_application" "vscode" {
   name              = "VSCode"
   slug              = "vscode-slug"
   protocol_provider = authentik_provider_proxy.vscode.id
-  meta_icon         = "https://simpleicons.org/icons/vscodium.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/vscode.svg"
 }
 
 resource "authentik_group" "vscode_users" {

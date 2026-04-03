@@ -71,7 +71,7 @@ resource "authentik_application" "argocd" {
   name              = "argocd"
   slug              = "argocd-slug"
   protocol_provider = authentik_provider_oauth2.argocd.id
-  meta_icon         = "https://simpleicons.org/icons/argo.svg"
+  meta_icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/argo-cd.svg"
 }
 
 resource "helm_release" "argocd" {
