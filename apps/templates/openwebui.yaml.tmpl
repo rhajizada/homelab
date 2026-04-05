@@ -54,9 +54,15 @@ extraEnvVars:
   - name: WEB_SEARCH_RESULT_COUNT
     value: "5"
   - name: WEB_SEARCH_ENGINE
-    value: "ddgs"
+    value: "searxng"
+  - name: SEARXNG_QUERY_URL
+    value: "${searxng_query_url}"
+  - name: SEARXNG_LANGUAGE
+    value: "${searxng_language}"
   - name: WEB_LOADER_ENGINE
     value: "playwright"
+  - name: PLAYWRIGHT_WS_URL
+    value: "${playwright_ws_url}"
   - name: RAG_OLLAMA_BASE_URL
     value: "http://ollama.llamero.svc.cluster.local:11434"
   - name: RAG_EMBEDDING_ENGINE

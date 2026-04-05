@@ -20,6 +20,15 @@ locals {
     chart      = "tika"
     version    = "2.9.0"
   }
+  searxng = {
+    image = "searxng/searxng:latest"
+    port  = 8080
+  }
+  playwright = {
+    image   = "mcr.microsoft.com/playwright:v1.58.2-noble"
+    version = "1.58.2"
+    port    = 3000
+  }
 }
 
 resource "kubernetes_namespace" "openwebui_namespace" {
@@ -34,6 +43,11 @@ resource "random_password" "openwebui_secret_key" {
 }
 
 resource "random_password" "openwebui_pipelines_key" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "openwebui_searxng_secret_key" {
   length  = 32
   special = false
 }
@@ -131,6 +145,248 @@ resource "kubernetes_secret" "openwebui_authentik_secret" {
   type = "Opaque"
 }
 
+resource "kubernetes_config_map" "openwebui_searxng_config" {
+  depends_on = [kubernetes_namespace.openwebui_namespace]
+
+  metadata {
+    name      = "open-webui-searxng-config"
+    namespace = local.openwebui.namespace
+    labels = {
+      app = "open-webui-searxng"
+    }
+  }
+
+  data = {
+    "settings.yml" = <<-YAML
+      use_default_settings:
+        engines:
+          keep_only:
+            - duckduckgo
+            - duckduckgo images
+            - duckduckgo news
+            - duckduckgo videos
+            - wikipedia
+            - wikidata
+      general:
+        instance_name: "Open WebUI SearXNG"
+      search:
+        default_lang: "en-US"
+        formats:
+          - html
+          - json
+      server:
+        bind_address: "0.0.0.0"
+        secret_key: "${random_password.openwebui_searxng_secret_key.result}"
+        limiter: false
+    YAML
+
+    "limiter.toml" = <<-TOML
+      [botdetection]
+      ipv4_prefix = 32
+      ipv6_prefix = 48
+
+      trusted_proxies = [
+        '127.0.0.0/8',
+        '::1',
+        '10.0.0.0/8',
+        '172.16.0.0/12',
+        '192.168.0.0/16',
+        'fd00::/8',
+      ]
+
+      [botdetection.ip_limit]
+      filter_link_local = false
+      link_token = false
+
+      [botdetection.ip_lists]
+      block_ip = []
+      pass_ip = []
+      pass_searxng_org = true
+    TOML
+  }
+}
+
+resource "kubernetes_deployment" "openwebui_searxng" {
+  depends_on = [
+    kubernetes_namespace.openwebui_namespace,
+    kubernetes_config_map.openwebui_searxng_config,
+  ]
+
+  metadata {
+    name      = "open-webui-searxng"
+    namespace = local.openwebui.namespace
+    labels = {
+      app = "open-webui-searxng"
+    }
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "open-webui-searxng"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "open-webui-searxng"
+        }
+      }
+
+      spec {
+        init_container {
+          name  = "copy-config"
+          image = "busybox:1.36"
+          command = [
+            "sh",
+            "-c",
+            "cp /config-src/settings.yml /config-dst/settings.yml && cp /config-src/limiter.toml /config-dst/limiter.toml"
+          ]
+
+          volume_mount {
+            name       = "config-src"
+            mount_path = "/config-src"
+          }
+
+          volume_mount {
+            name       = "config"
+            mount_path = "/config-dst"
+          }
+        }
+
+        container {
+          name  = "searxng"
+          image = local.searxng.image
+
+          env {
+            name  = "SEARXNG_PORT"
+            value = tostring(local.searxng.port)
+          }
+
+          env {
+            name  = "SEARXNG_BIND_ADDRESS"
+            value = "0.0.0.0"
+          }
+
+          volume_mount {
+            name       = "config"
+            mount_path = "/etc/searxng"
+          }
+
+          port {
+            name           = "http"
+            container_port = local.searxng.port
+          }
+        }
+
+        volume {
+          name = "config-src"
+          config_map {
+            name = kubernetes_config_map.openwebui_searxng_config.metadata[0].name
+          }
+        }
+
+        volume {
+          name = "config"
+          empty_dir {}
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "openwebui_searxng" {
+  depends_on = [kubernetes_namespace.openwebui_namespace]
+
+  metadata {
+    name      = "open-webui-searxng"
+    namespace = local.openwebui.namespace
+  }
+
+  spec {
+    selector = {
+      app = "open-webui-searxng"
+    }
+
+    port {
+      name        = "http"
+      port        = local.searxng.port
+      target_port = local.searxng.port
+    }
+  }
+}
+
+resource "kubernetes_deployment" "openwebui_playwright" {
+  depends_on = [kubernetes_namespace.openwebui_namespace]
+
+  metadata {
+    name      = "open-webui-playwright"
+    namespace = local.openwebui.namespace
+    labels = {
+      app = "open-webui-playwright"
+    }
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "open-webui-playwright"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "open-webui-playwright"
+        }
+      }
+
+      spec {
+        container {
+          name  = "playwright"
+          image = local.playwright.image
+          command = [
+            "/bin/sh",
+            "-c",
+            "npx -y playwright@${local.playwright.version} run-server --port ${local.playwright.port} --host 0.0.0.0"
+          ]
+
+          port {
+            name           = "ws"
+            container_port = local.playwright.port
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "openwebui_playwright" {
+  depends_on = [kubernetes_namespace.openwebui_namespace]
+
+  metadata {
+    name      = "open-webui-playwright"
+    namespace = local.openwebui.namespace
+  }
+
+  spec {
+    selector = {
+      app = "open-webui-playwright"
+    }
+
+    port {
+      name        = "ws"
+      port        = local.playwright.port
+      target_port = local.playwright.port
+    }
+  }
+}
+
 resource "helm_release" "chromadb" {
   depends_on = [
     kubernetes_namespace.openwebui_namespace,
@@ -179,6 +435,8 @@ resource "helm_release" "openwebui" {
     kubernetes_secret.openwebui_secret,
     kubernetes_secret.openwebui_authentik_secret,
     kubernetes_secret.openwebui_pipelines_secret,
+    kubernetes_service.openwebui_playwright,
+    kubernetes_service.openwebui_searxng,
     helm_release.chromadb,
     helm_release.tika
   ]
@@ -196,6 +454,9 @@ resource "helm_release" "openwebui" {
       host                 = local.openwebui.host
       cert_issuer          = var.cluster_cert_issuer
       ollama_url           = "http://ollama.${local.llamero.namespace}.svc.cluster.local:11434"
+      playwright_ws_url    = "ws://open-webui-playwright.${local.openwebui.namespace}.svc.cluster.local:${local.playwright.port}/"
+      searxng_language     = "en-US"
+      searxng_query_url    = "http://open-webui-searxng.${local.openwebui.namespace}.svc.cluster.local:${local.searxng.port}/search?q=<query>&format=json"
       storage_size         = local.openwebui.storage_size
       openid_provider_url  = "https://${local.authentik.host}/application/o/openwebui-slug/.well-known/openid-configuration"
       openid_provider_name = "authentik"
