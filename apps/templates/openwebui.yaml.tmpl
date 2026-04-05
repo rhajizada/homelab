@@ -27,8 +27,7 @@ sso:
 
 serviceAccount:
   enable: true
-  create: false
-  name: existing-sa
+  create: true
 
 extraEnvVars:
   - name: ENV
@@ -92,14 +91,14 @@ ingress:
 
 persistence:
   enabled: true
-  existingClaim: open-webui
   size: ${storage_size}
 
 pipelines:
   enabled: true
   fullnameOverride: open-webui-pipelines
   persistence:
-    existingClaim: open-webui-pipelines
+    enabled: true
+    size: ${storage_size}
   extraEnvVars:
     - name: PIPELINES_API_KEY
       valueFrom:
