@@ -8,7 +8,7 @@ locals {
     }
 
     server = {
-      image = "rdall96/minecraft-server:latest"
+      image = "rdall96/minecraft-server:26.1.2"
 
       storage = {
         world = {
@@ -32,6 +32,7 @@ locals {
         EULA                   = "true"
         MOTD                   = "Welcome to SoloCupLabs"
         DIFFICULTY             = "easy"
+        LEVEL_NAME             = "world/current"
         MAX_PLAYERS            = "20"
         ONLINE_MODE            = "false"
         WHITE_LIST             = "false"
@@ -102,6 +103,10 @@ resource "kubernetes_deployment" "minecraft_server" {
 
   spec {
     replicas = 1
+
+    strategy {
+      type = "Recreate"
+    }
 
     selector {
       match_labels = { app = "minecraft-server" }
