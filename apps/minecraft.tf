@@ -4,7 +4,7 @@ locals {
     host      = "minecraft.${var.base_domain}"
 
     gate = {
-      image = "ghcr.io/minekube/gate:v0.62.3"
+      image = "ghcr.io/minekube/gate:v0.64.0"
     }
 
     server = {
