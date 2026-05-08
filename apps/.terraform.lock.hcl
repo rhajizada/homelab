@@ -5,6 +5,7 @@ provider "registry.terraform.io/goauthentik/authentik" {
   version     = "2025.12.1"
   constraints = "2025.12.1"
   hashes = [
+    "h1:doHtDOiEIgIUWlUUc9jC7Uqdhj1hsy3etvdYmegcUZM=",
     "h1:p9AGeRqK50wTHEIp7z7O4MUP83cs+lt7wPajZ9m9TB8=",
     "zh:0e856d3b13614bc32346a236a8e84ba55ecd17238c2008d4b3e71aa8cb49f515",
     "zh:2dcc44cd499c18ebbc4f763eff97a7b725763c8ac8fbb5d69c935413ccdc4962",
