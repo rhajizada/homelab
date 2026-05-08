@@ -12,13 +12,13 @@ locals {
 
       storage = {
         world = {
-          size         = "4Gi"
-          class        = "smb-private"
+          size         = "16Gi"
+          class        = "longhorn"
           access_modes = ["ReadWriteMany"]
         }
         configurations = {
           size         = "128Mi"
-          class        = "smb-private"
+          class        = "longhorn"
           access_modes = ["ReadWriteMany"]
         }
       }
@@ -31,8 +31,7 @@ locals {
       env = {
         EULA                   = "true"
         MOTD                   = "Welcome to SoloCupLabs"
-        DIFFICULTY             = "easy"
-        LEVEL_NAME             = "world/current"
+        DIFFICULTY             = "normal"
         MAX_PLAYERS            = "20"
         ONLINE_MODE            = "false"
         WHITE_LIST             = "false"
