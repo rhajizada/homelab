@@ -47,11 +47,12 @@ module "dns" {
 }
 
 module "route53" {
-  source       = "./modules/route53"
-  cluster_name = var.cluster_name
-  environment  = var.environment
-  base_domain  = var.base_domain
-  dns_name     = local.vpn_dns_name
+  source         = "./modules/route53"
+  cluster_name   = var.cluster_name
+  environment    = var.environment
+  base_domain    = var.base_domain
+  dns_name       = local.vpn_dns_name
+  custom_records = var.dns_custom_records
 }
 
 module "talos" {

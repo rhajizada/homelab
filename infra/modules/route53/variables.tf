@@ -17,3 +17,14 @@ variable "environment" {
   description = "Environment name (e.g dev/staging/prod)"
   type        = string
 }
+
+variable "custom_records" {
+  description = "Custom DNS records to create in the hosted zone using subdomain labels relative to base_domain"
+  type = list(object({
+    name    = string
+    type    = string
+    ttl     = number
+    records = list(string)
+  }))
+  default = []
+}

@@ -40,6 +40,17 @@ variable "dns_subzone_records" {
   }
 }
 
+variable "dns_custom_records" {
+  description = "Custom Route53 records to create in the base hosted zone using subdomain labels relative to base_domain"
+  type = list(object({
+    name    = string
+    type    = string
+    ttl     = number
+    records = list(string)
+  }))
+  default = []
+}
+
 
 variable "acme_email" {
   description = "Email to use for ACME registration"
