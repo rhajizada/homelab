@@ -7,7 +7,7 @@ locals {
 
     connect = {
       enabled = var.minecraft_connect != null && try(trimspace(var.minecraft_connect.name), "") != "" && try(trimspace(var.minecraft_connect.token), "") != ""
-      name    = var.minecraft_connect != null ? try(var.minecraft_connect.name, "") : ""
+      name    = var.minecraft_connect != null ? try(trimspace(var.minecraft_connect.name), "") : ""
       token   = var.minecraft_connect != null ? try(var.minecraft_connect.token, "") : ""
     }
 
@@ -37,9 +37,11 @@ locals {
         SKIP_DOWNLOAD_DEFAULTS = "true"
         LOG_LEVEL              = "debug"
         INIT_MEMORY            = "1G"
-        MAX_MEMORY             = "3G"
+        MAX_MEMORY             = "4G"
         USE_MEOWICE_FLAGS      = "true"
         ENABLE_RCON            = "true"
+        VIEW_DISTANCE          = "15"
+        SIMULATION_DISTANCE    = "15"
         MOTD                   = "Welcome to SoloCupLabs"
         DIFFICULTY             = "normal"
         MAX_PLAYERS            = "20"
@@ -565,23 +567,11 @@ resource "kubernetes_config_map" "gate_config" {
   }
 
   data = {
-    "config.yml" = <<-YAML
-      config:
-        bind: 0.0.0.0:25565
-        onlineMode: true
-        servers:
-          survival: minecraft-server.${local.minecraft.namespace}.svc.cluster.local:25565
-        try:
-          - survival
-        forwarding:
-          mode: legacy
-
-      connect:
-        enabled: ${local.minecraft.connect.enabled}
-        %{~if local.minecraft.connect.enabled~}
-        name: ${local.minecraft.connect.name}
-        %{~endif~}
-    YAML
+    "config.yml" = templatefile("${path.module}/templates/minecraft-gate-config.yaml.tmpl", {
+      namespace       = local.minecraft.namespace
+      connect_enabled = local.minecraft.connect.enabled
+      connect_name    = local.minecraft.connect.name
+    })
   }
 }
 
