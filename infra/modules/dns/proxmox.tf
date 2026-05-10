@@ -22,6 +22,11 @@ locals {
       k8s_lb_ip           = var.k8s_lb_ip
       subzone_records     = var.subzone_records
     })
+    zone = templatefile("${path.module}/templates/coredns/zone.tmpl", {
+      base_domain = var.base_domain
+      dns_ip      = var.ip_address
+      k8s_lb_ip   = var.k8s_lb_ip
+    })
   }
   resolved_configuration = templatefile("${path.module}/templates/resolved.conf.tmpl", {})
 }
@@ -57,6 +62,10 @@ resource "proxmox_virtual_environment_file" "dns_user_data" {
         - content: |
             ${indent(6, local.coredns.config)}
           path: /etc/coredns/Corefile
+          permissions: '0644'
+        - content: |
+            ${indent(6, local.coredns.zone)}
+          path: /etc/coredns/${var.base_domain}.zone
           permissions: '0644'
         - content: |
             ${indent(6, local.coredns.service)}

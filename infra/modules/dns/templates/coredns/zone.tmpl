@@ -1,0 +1,15 @@
+$ORIGIN ${base_domain}.
+$TTL 60
+
+@   IN SOA ns1.${base_domain}. hostmaster.${base_domain}. (
+        2026051001
+        7200
+        900
+        1209600
+        60
+)
+
+@   IN NS ns1.${base_domain}.
+ns1 IN A ${dns_ip}
+
+*   IN A ${k8s_lb_ip}
