@@ -1,15 +1,9 @@
 locals {
   minecraft = {
     namespace     = "minecraft"
-    host          = "survival.${var.base_domain}"
+    host          = "minecraft.${var.base_domain}"
     admin_host    = "mrcon.${var.base_domain}"
     admin_ws_host = "mrcon-ws.${var.base_domain}"
-
-    connect = {
-      enabled = var.minecraft_connect != null && try(trimspace(var.minecraft_connect.name), "") != "" && try(trimspace(var.minecraft_connect.token), "") != ""
-      name    = var.minecraft_connect != null ? try(trimspace(var.minecraft_connect.name), "") : ""
-      token   = var.minecraft_connect != null ? try(var.minecraft_connect.token, "") : ""
-    }
 
     gate = {
       image = "ghcr.io/minekube/gate:v0.64.0"
@@ -45,9 +39,9 @@ locals {
         MOTD                   = "Welcome to SoloCupLabs"
         DIFFICULTY             = "normal"
         MAX_PLAYERS            = "20"
-        ONLINE_MODE            = "false"
+        ONLINE_MODE            = "true"
         ENABLE_WHITELIST       = "true"
-        ENFORCE_SECURE_PROFILE = "false"
+        ENFORCE_SECURE_PROFILE = "true"
       }
     }
 
@@ -115,43 +109,10 @@ resource "kubernetes_secret" "minecraft_rcon_auth" {
   type = "Opaque"
 }
 
-resource "kubernetes_secret" "minecraft_gate_connect" {
-  depends_on = [kubernetes_namespace.minecraft]
-
-  metadata {
-    name      = "minecraft-gate-connect"
-    namespace = local.minecraft.namespace
-  }
-
-  data = {
-    token = local.minecraft.connect.token
-  }
-
-  type = "Opaque"
-}
-
-resource "kubernetes_config_map" "minecraft_server_proxy_config" {
-  depends_on = [kubernetes_namespace.minecraft]
-
-  metadata {
-    name      = "minecraft-server-proxy-config"
-    namespace = local.minecraft.namespace
-    labels    = { app = "minecraft-server" }
-  }
-
-  data = {
-    "spigot.yml" = <<-YAML
-      settings:
-        bungeecord: true
-    YAML
-  }
-}
-
 resource "kubernetes_deployment" "minecraft_server" {
   depends_on = [
     kubernetes_namespace.minecraft,
     kubernetes_persistent_volume_claim.minecraft_data,
-    kubernetes_config_map.minecraft_server_proxy_config,
     kubernetes_secret.minecraft_rcon_auth,
   ]
 
@@ -242,13 +203,6 @@ resource "kubernetes_deployment" "minecraft_server" {
             mount_path = "/run/secrets/minecraft-rcon"
             read_only  = true
           }
-
-          volume_mount {
-            name       = "proxy-config"
-            mount_path = "/data/spigot.yml"
-            sub_path   = "spigot.yml"
-            read_only  = true
-          }
         }
 
         volume {
@@ -266,13 +220,6 @@ resource "kubernetes_deployment" "minecraft_server" {
               key  = "rcon-password"
               path = "rcon-password"
             }
-          }
-        }
-
-        volume {
-          name = "proxy-config"
-          config_map {
-            name = kubernetes_config_map.minecraft_server_proxy_config.metadata[0].name
           }
         }
       }
@@ -568,9 +515,8 @@ resource "kubernetes_config_map" "gate_config" {
 
   data = {
     "config.yml" = templatefile("${path.module}/templates/minecraft-gate-config.yaml.tmpl", {
-      namespace       = local.minecraft.namespace
-      connect_enabled = local.minecraft.connect.enabled
-      connect_name    = local.minecraft.connect.name
+      host      = local.minecraft.host
+      namespace = local.minecraft.namespace
     })
   }
 }
@@ -579,7 +525,6 @@ resource "kubernetes_deployment" "gate" {
   depends_on = [
     kubernetes_namespace.minecraft,
     kubernetes_config_map.gate_config,
-    kubernetes_secret.minecraft_gate_connect,
     kubernetes_service.minecraft_server,
   ]
 
@@ -603,16 +548,6 @@ resource "kubernetes_deployment" "gate" {
         container {
           name  = "gate"
           image = local.minecraft.gate.image
-
-          env {
-            name = "CONNECT_TOKEN"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.minecraft_gate_connect.metadata[0].name
-                key  = "token"
-              }
-            }
-          }
 
           port {
             name           = "minecraft"

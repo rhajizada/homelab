@@ -33,12 +33,3 @@ variable "samba_credentials" {
     shares   = list(string)
   })
 }
-
-variable "minecraft_connect" {
-  description = "Shared Minekube Connect endpoint configuration for the Minecraft Gate proxy"
-  type = object({
-    name  = string
-    token = string
-  })
-  default = null
-}

@@ -1,15 +1,9 @@
-      config:
-        bind: 0.0.0.0:25565
-        onlineMode: true
-        servers:
-          survival: minecraft-server.${namespace}.svc.cluster.local:25565
-        try:
-          - survival
-        forwarding:
-          mode: legacy
-
-      connect:
-        enabled: ${connect_enabled}
-        %{~if connect_name != ""~}
-        name: ${connect_name}
-        %{~endif~}
+config:
+  bind: 0.0.0.0:25565
+  lite:
+    enabled: true
+    routes:
+      - host: ${host}
+        backend: minecraft-server.${namespace}.svc.cluster.local:25565
+      - host: '*'
+        backend: minecraft-server.${namespace}.svc.cluster.local:25565
