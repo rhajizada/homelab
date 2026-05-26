@@ -18,6 +18,11 @@ locals {
           class        = "longhorn"
           access_modes = ["ReadWriteMany"]
         }
+        backups = {
+          size         = "64Gi"
+          class        = "smb-private"
+          access_modes = ["ReadWriteMany"]
+        }
       }
 
       resources = {
@@ -53,6 +58,46 @@ locals {
         limits   = { cpu = "500m", memory = "512Mi" }
       }
     }
+
+    backup = {
+      image    = "itzg/mc-backup:latest"
+      schedule = "0 */4 * * *"
+
+      resources = {
+        requests = { cpu = "50m", memory = "128Mi" }
+        limits   = { cpu = "500m", memory = "512Mi" }
+      }
+
+      env = {
+        SRC_DIR             = "/data"
+        DEST_DIR            = "/backups"
+        BACKUP_NAME         = "world"
+        NAME_WITH_VERSION   = "true"
+        BACKUP_METHOD       = "tar"
+        PRUNE_BACKUPS_DAYS  = "14"
+        PRUNE_BACKUPS_COUNT = "28"
+        RCON_HOST           = "minecraft-server-rcon.minecraft.svc.cluster.local"
+        RCON_PORT           = "25575"
+        RCON_PASSWORD_FILE  = "/run/secrets/minecraft-rcon/rcon-password"
+        RCON_RETRIES        = "5"
+        RCON_RETRY_INTERVAL = "10s"
+        SERVER_HOST         = "minecraft-server.minecraft.svc.cluster.local"
+        SERVER_PORT         = "25565"
+        ENABLE_SAVE_ALL     = "true"
+        ENABLE_SYNC         = "true"
+        EXCLUDES            = "*.jar,cache,logs,*.tmp"
+        TZ                  = "Etc/UTC-5"
+        LINK_LATEST         = "true"
+        TAR_COMPRESS_METHOD = "gzip"
+
+        MC_BACKUP_SKIP_IF_PLAYERS_ONLINE = "true"
+        MC_BACKUP_SKIP_MESSAGE           = "Automated backup skipped because players are online; will retry at the next scheduled window."
+      }
+
+      # Pass through additional method-specific variables such as RESTIC_PASSWORD,
+      # RESTIC_REPOSITORY, AWS_* or extra RCLONE settings here if needed later.
+      extra_env = {}
+    }
   }
 }
 
@@ -87,6 +132,26 @@ resource "kubernetes_persistent_volume_claim" "minecraft_data" {
     resources {
       requests = {
         storage = local.minecraft.server.storage.data.size
+      }
+    }
+  }
+}
+
+resource "kubernetes_persistent_volume_claim" "minecraft_backups" {
+  depends_on = [kubernetes_namespace.minecraft]
+
+  metadata {
+    name      = "minecraft-backups"
+    namespace = local.minecraft.namespace
+  }
+
+  spec {
+    storage_class_name = local.minecraft.server.storage.backups.class
+    access_modes       = local.minecraft.server.storage.backups.access_modes
+
+    resources {
+      requests = {
+        storage = local.minecraft.server.storage.backups.size
       }
     }
   }
@@ -263,6 +328,125 @@ resource "kubernetes_service" "minecraft_server_rcon" {
       port        = 25575
       target_port = 25575
       protocol    = "TCP"
+    }
+  }
+}
+
+resource "kubernetes_cron_job_v1" "minecraft_backup" {
+  depends_on = [
+    kubernetes_namespace.minecraft,
+    kubernetes_persistent_volume_claim.minecraft_data,
+    kubernetes_persistent_volume_claim.minecraft_backups,
+    kubernetes_secret.minecraft_rcon_auth,
+    kubernetes_service.minecraft_server,
+    kubernetes_service.minecraft_server_rcon,
+  ]
+
+  metadata {
+    name      = "minecraft-backup"
+    namespace = local.minecraft.namespace
+  }
+
+  spec {
+    schedule                      = local.minecraft.backup.schedule
+    concurrency_policy            = "Forbid"
+    successful_jobs_history_limit = 3
+    failed_jobs_history_limit     = 3
+
+    job_template {
+      metadata {}
+
+      spec {
+        backoff_limit = 1
+
+        template {
+          metadata {}
+
+          spec {
+            restart_policy = "Never"
+
+            container {
+              name  = "minecraft-backup"
+              image = local.minecraft.backup.image
+
+              command = ["/bin/bash", "-ec"]
+              args = [<<-EOT
+                players_online="$$(mc-monitor status --host "$${SERVER_HOST}" --port "$${SERVER_PORT}" --show-player-count 2>/dev/null || true)"
+
+                if [ "$${MC_BACKUP_SKIP_IF_PLAYERS_ONLINE,,}" = "true" ] && [ "$${players_online:-}" != "0" ]; then
+                  if [ -n "$${MC_BACKUP_SKIP_MESSAGE:-}" ] && [ -f "$${RCON_PASSWORD_FILE}" ]; then
+                    export RCON_PASSWORD="$$(cat "$${RCON_PASSWORD_FILE}")"
+                    rcon-cli "say $${MC_BACKUP_SKIP_MESSAGE}" || true
+                  fi
+
+                  echo "Skipping Minecraft backup because players_online=$${players_online:-unknown}"
+                  exit 0
+                fi
+
+                exec backup now
+              EOT
+              ]
+
+              dynamic "env" {
+                for_each = {
+                  for key, value in merge(local.minecraft.backup.env, local.minecraft.backup.extra_env) : key => value if value != null
+                }
+                content {
+                  name  = env.key
+                  value = env.value
+                }
+              }
+
+              resources {
+                limits   = local.minecraft.backup.resources.limits
+                requests = local.minecraft.backup.resources.requests
+              }
+
+              volume_mount {
+                name       = "data"
+                mount_path = "/data"
+                read_only  = true
+              }
+
+              volume_mount {
+                name       = "backups"
+                mount_path = "/backups"
+              }
+
+              volume_mount {
+                name       = "rcon-auth"
+                mount_path = "/run/secrets/minecraft-rcon"
+                read_only  = true
+              }
+            }
+
+            volume {
+              name = "data"
+              persistent_volume_claim {
+                claim_name = kubernetes_persistent_volume_claim.minecraft_data.metadata[0].name
+              }
+            }
+
+            volume {
+              name = "backups"
+              persistent_volume_claim {
+                claim_name = kubernetes_persistent_volume_claim.minecraft_backups.metadata[0].name
+              }
+            }
+
+            volume {
+              name = "rcon-auth"
+              secret {
+                secret_name = kubernetes_secret.minecraft_rcon_auth.metadata[0].name
+                items {
+                  key  = "rcon-password"
+                  path = "rcon-password"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
