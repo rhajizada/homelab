@@ -59,6 +59,21 @@ locals {
       }
     }
 
+    monitor = {
+      image = "itzg/mc-monitor:latest"
+      port  = 8080
+
+      resources = {
+        requests = { cpu = "50m", memory = "64Mi" }
+        limits   = { cpu = "250m", memory = "256Mi" }
+      }
+
+      env = {
+        EXPORT_SERVERS = "minecraft-server.minecraft.svc.cluster.local:25565"
+        TIMEOUT        = "15s"
+      }
+    }
+
     backup = {
       image    = "itzg/mc-backup:latest"
       schedule = "0 */4 * * *"
@@ -328,6 +343,135 @@ resource "kubernetes_service" "minecraft_server_rcon" {
       port        = 25575
       target_port = 25575
       protocol    = "TCP"
+    }
+  }
+}
+
+resource "kubernetes_deployment" "minecraft_monitor" {
+  depends_on = [
+    kubernetes_namespace.minecraft,
+    kubernetes_service.minecraft_server,
+  ]
+
+  metadata {
+    name      = "minecraft-monitor"
+    namespace = local.minecraft.namespace
+    labels    = { app = "minecraft-monitor" }
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = { app = "minecraft-monitor" }
+    }
+
+    template {
+      metadata { labels = { app = "minecraft-monitor" } }
+
+      spec {
+        container {
+          name  = "minecraft-monitor"
+          image = local.minecraft.monitor.image
+          args  = ["export-for-prometheus"]
+
+          dynamic "env" {
+            for_each = local.minecraft.monitor.env
+            content {
+              name  = env.key
+              value = env.value
+            }
+          }
+
+          port {
+            name           = "http-metrics"
+            container_port = local.minecraft.monitor.port
+            protocol       = "TCP"
+          }
+
+          resources {
+            limits   = local.minecraft.monitor.resources.limits
+            requests = local.minecraft.monitor.resources.requests
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/metrics"
+              port = "http-metrics"
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 10
+            timeout_seconds       = 3
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/metrics"
+              port = "http-metrics"
+            }
+            initial_delay_seconds = 15
+            period_seconds        = 20
+            timeout_seconds       = 3
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "minecraft_monitor" {
+  depends_on = [kubernetes_namespace.minecraft]
+
+  metadata {
+    name      = "minecraft-monitor"
+    namespace = local.minecraft.namespace
+    labels    = { app = "minecraft-monitor" }
+  }
+
+  spec {
+    selector = { app = "minecraft-monitor" }
+
+    port {
+      name        = "http-metrics"
+      port        = local.minecraft.monitor.port
+      target_port = local.minecraft.monitor.port
+      protocol    = "TCP"
+    }
+  }
+}
+
+resource "kubernetes_manifest" "minecraft_monitor_service_monitor" {
+  depends_on = [
+    helm_release.kube_prometheus_stack,
+    kubernetes_service.minecraft_monitor,
+  ]
+
+  manifest = {
+    apiVersion = "monitoring.coreos.com/v1"
+    kind       = "ServiceMonitor"
+    metadata = {
+      name      = "minecraft-monitor"
+      namespace = local.minecraft.namespace
+      labels = {
+        app = "minecraft-monitor"
+      }
+    }
+    spec = {
+      selector = {
+        matchLabels = {
+          app = "minecraft-monitor"
+        }
+      }
+      namespaceSelector = {
+        matchNames = [local.minecraft.namespace]
+      }
+      endpoints = [
+        {
+          port     = "http-metrics"
+          path     = "/metrics"
+          interval = "30s"
+        }
+      ]
     }
   }
 }
@@ -792,4 +936,23 @@ resource "kubernetes_service" "gate" {
       protocol    = "TCP"
     }
   }
+}
+
+resource "kubernetes_config_map" "minecraft_grafana_dashboard" {
+  metadata {
+    name      = "minecraft-grafana-dashboard"
+    namespace = local.monitoring.namespace
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "minecraft-dashboard.json" = file("${path.module}/templates/minecraft-dashboard.json")
+  }
+
+  depends_on = [
+    helm_release.kube_prometheus_stack,
+    kubernetes_manifest.minecraft_monitor_service_monitor,
+  ]
 }
