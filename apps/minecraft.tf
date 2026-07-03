@@ -5,10 +5,6 @@ locals {
     admin_host    = "mrcon.${var.base_domain}"
     admin_ws_host = "mrcon-ws.${var.base_domain}"
 
-    gate = {
-      image = "ghcr.io/minekube/gate:v0.64.0"
-    }
-
     server = {
       image = "itzg/minecraft-server:stable-java25-jdk"
 
@@ -26,8 +22,8 @@ locals {
       }
 
       resources = {
-        requests = { cpu = "1", memory = "2Gi" }
-        limits   = { cpu = "2", memory = "4Gi" }
+        requests = { cpu = "2", memory = "4Gi" }
+        limits   = { cpu = "4", memory = "8Gi" }
       }
 
       env = {
@@ -35,8 +31,8 @@ locals {
         TYPE                   = "PAPER"
         SKIP_DOWNLOAD_DEFAULTS = "true"
         LOG_LEVEL              = "debug"
-        INIT_MEMORY            = "1G"
-        MAX_MEMORY             = "4G"
+        INIT_MEMORY            = "2G"
+        MAX_MEMORY             = "8G"
         USE_MEOWICE_FLAGS      = "true"
         ENABLE_RCON            = "true"
         VIEW_DISTANCE          = "15"
@@ -316,12 +312,14 @@ resource "kubernetes_service" "minecraft_server" {
   }
 
   spec {
+    type     = "NodePort"
     selector = { app = "minecraft-server" }
 
     port {
       name        = "minecraft"
       port        = 25565
       target_port = 25565
+      node_port   = 32565
       protocol    = "TCP"
     }
   }
@@ -828,112 +826,6 @@ resource "kubernetes_ingress_v1" "minecraft_rcon_admin_websocket" {
     tls {
       secret_name = "minecraft-admin-ws-tls"
       hosts       = [local.minecraft.admin_ws_host]
-    }
-  }
-}
-
-resource "kubernetes_config_map" "gate_config" {
-  depends_on = [kubernetes_namespace.minecraft]
-
-  metadata {
-    name      = "gate-config"
-    namespace = local.minecraft.namespace
-    labels    = { app = "gate" }
-  }
-
-  data = {
-    "config.yml" = templatefile("${path.module}/templates/minecraft-gate-config.yaml.tmpl", {
-      host      = local.minecraft.host
-      namespace = local.minecraft.namespace
-    })
-  }
-}
-
-resource "kubernetes_deployment" "gate" {
-  depends_on = [
-    kubernetes_namespace.minecraft,
-    kubernetes_config_map.gate_config,
-    kubernetes_service.minecraft_server,
-  ]
-
-  metadata {
-    name      = "gate"
-    namespace = local.minecraft.namespace
-    labels    = { app = "gate" }
-  }
-
-  spec {
-    replicas = 1
-
-    selector {
-      match_labels = { app = "gate" }
-    }
-
-    template {
-      metadata { labels = { app = "gate" } }
-
-      spec {
-        container {
-          name  = "gate"
-          image = local.minecraft.gate.image
-
-          port {
-            name           = "minecraft"
-            container_port = 25565
-            protocol       = "TCP"
-          }
-
-          readiness_probe {
-            tcp_socket { port = 25565 }
-            initial_delay_seconds = 3
-            period_seconds        = 10
-            timeout_seconds       = 3
-          }
-
-          liveness_probe {
-            tcp_socket { port = 25565 }
-            initial_delay_seconds = 10
-            period_seconds        = 20
-            timeout_seconds       = 3
-          }
-
-          volume_mount {
-            name       = "config"
-            mount_path = "/config.yml"
-            sub_path   = "config.yml"
-          }
-        }
-
-        volume {
-          name = "config"
-          config_map {
-            name = kubernetes_config_map.gate_config.metadata[0].name
-          }
-        }
-      }
-    }
-  }
-}
-
-
-resource "kubernetes_service" "gate" {
-  depends_on = [kubernetes_namespace.minecraft]
-
-  metadata {
-    name      = "gate"
-    namespace = local.minecraft.namespace
-  }
-
-  spec {
-    type     = "NodePort"
-    selector = { app = "gate" }
-
-    port {
-      name        = "minecraft"
-      port        = 25565
-      target_port = 25565
-      node_port   = 32565
-      protocol    = "TCP"
     }
   }
 }
