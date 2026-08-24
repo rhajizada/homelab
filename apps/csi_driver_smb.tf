@@ -4,7 +4,7 @@ locals {
     release_name  = "csi-driver-smb"
     chart         = "csi-driver-smb"
     repository    = "https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-    chart_version = "1.20.1"
+    chart_version = "1.20.3"
     secret_name   = "smbcreds"
   }
 

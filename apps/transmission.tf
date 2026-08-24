@@ -2,7 +2,7 @@ locals {
   transmission = {
     namespace = "transmission"
     host      = "transmission.${var.base_domain}"
-    image     = "linuxserver/transmission:4.1.1"
+    image     = "linuxserver/transmission:4.1.3"
 
     storage = {
       config = {

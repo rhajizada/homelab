@@ -29,6 +29,7 @@ locals {
       env = {
         EULA                   = "TRUE"
         TYPE                   = "PAPER"
+        VERSION                = "26.2"
         SKIP_DOWNLOAD_DEFAULTS = "true"
         LOG_LEVEL              = "debug"
         INIT_MEMORY            = "2G"

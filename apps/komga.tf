@@ -2,7 +2,7 @@ locals {
   komga = {
     namespace = "komga"
     host      = "komga.${var.base_domain}"
-    image     = "gotson/komga:1.24.3"
+    image     = "gotson/komga:1.26.3"
     port      = 25600
 
     storage = {
