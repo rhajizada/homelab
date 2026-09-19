@@ -51,6 +51,14 @@ prometheus:
   enabled: true
   prometheusSpec:
     retention: 15d
+    retentionSize: 96GiB
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: "2"
+        memory: 8Gi
     serviceMonitorSelectorNilUsesHelmValues: false
     serviceMonitorSelector: {}
     serviceMonitorNamespaceSelector: {}
@@ -64,7 +72,8 @@ prometheus:
       volumeClaimTemplate:
         spec:
           accessModes:
-            - ReadWriteMany
+            - ReadWriteOnce
+          storageClassName: ${prometheus_storage_class}
           resources:
             requests:
               storage: ${prometheus_storage_size}

@@ -14,11 +14,35 @@ locals {
     }
 
     prometheus = {
-      storage_size = "8Gi"
+      storage_class = "prometheus-longhorn"
+      storage_size  = "128Gi"
     }
 
     alertmanager = {
       storage_size = "2Gi"
+    }
+  }
+}
+
+resource "kubernetes_manifest" "prometheus_storage_class" {
+  manifest = {
+    apiVersion = "storage.k8s.io/v1"
+    kind       = "StorageClass"
+    metadata = {
+      name = local.monitoring.prometheus.storage_class
+    }
+    provisioner          = "driver.longhorn.io"
+    allowVolumeExpansion = true
+    reclaimPolicy        = "Delete"
+    volumeBindingMode    = "Immediate"
+    parameters = {
+      dataEngine                = "v1"
+      dataLocality              = "disabled"
+      disableRevisionCounter    = "true"
+      fsType                    = "ext4"
+      numberOfReplicas          = "2"
+      staleReplicaTimeout       = "30"
+      unmapMarkSnapChainRemoved = "ignored"
     }
   }
 }
@@ -124,6 +148,7 @@ resource "helm_release" "kube_prometheus_stack" {
     kubernetes_secret.grafana_admin_secret,
     kubernetes_secret.grafana_authentik_secret,
     authentik_application.grafana,
+    kubernetes_manifest.prometheus_storage_class,
   ]
 
   name       = "kube-prometheus-stack"
@@ -140,6 +165,7 @@ resource "helm_release" "kube_prometheus_stack" {
       authentik_host            = local.authentik.host
       host                      = local.monitoring.host
       cert_issuer               = var.cluster_cert_issuer
+      prometheus_storage_class  = local.monitoring.prometheus.storage_class
       prometheus_storage_size   = local.monitoring.prometheus.storage_size
       alertmanager_storage_size = local.monitoring.alertmanager.storage_size
     })
