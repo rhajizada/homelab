@@ -2,7 +2,7 @@ locals {
   papra = {
     namespace = "papra"
     host      = "papra.${var.base_domain}"
-    image     = "ghcr.io/papra-hq/papra:26.6.1-rootless"
+    image     = "ghcr.io/papra-hq/papra:26.6.2-rootless"
     port      = 1221
 
     storage = {
