@@ -4,7 +4,7 @@ locals {
     host      = "karakeep.${var.base_domain}"
 
     web = {
-      image = "ghcr.io/karakeep-app/karakeep:0.31.0"
+      image = "ghcr.io/karakeep-app/karakeep:0.33.2"
       resources = {
         requests = {
           cpu    = "500m"
