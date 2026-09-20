@@ -18,7 +18,7 @@ locals {
     }
 
     chrome = {
-      image = "gcr.io/zenika-hub/alpine-chrome:124"
+      image = "chromedp/headless-shell:151.0.7922.109"
       resources = {
         requests = {
           cpu    = "250m"
@@ -212,8 +212,6 @@ resource "kubernetes_deployment" "karakeep_chrome" {
             "--no-sandbox",
             "--disable-gpu",
             "--disable-dev-shm-usage",
-            "--remote-debugging-address=0.0.0.0",
-            "--remote-debugging-port=9222",
             "--hide-scrollbars"
           ]
           port {
