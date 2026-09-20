@@ -1,0 +1,44 @@
+{
+  "skill_name": "check-app-updates",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Audit all Terraform-managed applications in apps/ and write a Markdown update report to the requested output directory. Correctly treat each apps/*.tf file as one logical application: in particular, Open WebUI's ChromaDB, Tika, SearXNG, and Playwright are components of Open WebUI, not four standalone applications. Check both the configured artifacts and, if possible, the cluster-observed state. Research current releases from authoritative sources, then sort each updatable dependency into routine, review-required, or breaking/migration categories.",
+      "expected_output": "A complete, source-linked Markdown update report that groups multi-component applications correctly, separates configured and observed state, and sorts actionable rows from routine to breaking/migration.",
+      "files": [],
+      "expectations": [
+        "The Markdown report includes a summary and an update matrix with risk, app, component, type, current deployed, Terraform configured, next available, change list, and sources columns.",
+        "Open WebUI is one logical application with Open WebUI, ChromaDB, Tika, SearXNG, and Playwright identified as components rather than separate applications.",
+        "The report distinguishes cluster-observed deployed versions from Terraform-configured versions and explicitly labels moving tags or unavailable observation rather than presenting them as precise versions.",
+        "Every reported candidate update has a source link and a concrete reason for its routine, review-required, or breaking/migration category.",
+        "Update rows are ordered from routine through review-required to breaking/migration."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a Markdown upgrade report only for apps/openwebui.tf and apps/gitea.tf. Determine the actual components by resolving locals and Helm release references, including the explicit ChromaDB image tag. Do not call helper containers their own applications. For every independently versioned component, determine the configured and deployed version when observable, the newest stable release, and documented upgrade risk with source links.",
+      "expected_output": "A focused, evidence-based report with one Open WebUI group and one Gitea group, accurate component versioning, clear uncertainty labels, and risk-based sorting.",
+      "files": [],
+      "expectations": [
+        "The report keeps Open WebUI and Gitea as the only logical applications and does not list a helper image as a standalone app.",
+        "The report identifies Open WebUI's ChromaDB chart at configured version 0.1.4 and its separately overridden image tag at 1.5.2 as distinct dependencies.",
+        "The report identifies Gitea's main chart at configured version 12.5.0 and Actions chart at configured version 0.0.3 as distinct dependencies.",
+        "Each dependency row includes a deployed or explicitly unavailable observed version, a next version or an explicit unverified/moving result, a risk category, and an authoritative source link.",
+        "The report identifies relevant configuration drift or mutable chart-managed dependencies in a needs-attention section."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Review apps/minecraft.tf, apps/llamero.tf, and apps/transmission.tf for available updates. Produce the requested Markdown table sorted from least to most difficult upgrade. Handle latest/stable/channel tags and commit-SHA image tags honestly: use observed image digests if available, otherwise label them as moving or unverified rather than inventing semantic versions. Keep Minecraft's server, monitor, backup, and RCON as one application, and keep Llamero's database, queue, workers, UI, and Ollama together.",
+      "expected_output": "A report that correctly groups workloads, flags non-immutable or non-semver references, distinguishes known from unknown versions, and bases risk categories on release documentation.",
+      "files": [],
+      "expectations": [
+        "The report groups server, monitor, backup, and RCON under Minecraft and groups PostgreSQL, Redis, server, worker, scheduler, UI, and Ollama under Llamero.",
+        "The report does not present latest, stable, major-only, or commit-SHA tags as precise semantic versions without an observed digest or an explicit moving/unverified label.",
+        "Every candidate update has a risk category, a concise compatibility rationale, and an authoritative release, registry, or project source link.",
+        "The report separates current deployed evidence from Terraform configuration and records unavailable cluster evidence honestly when it cannot be retrieved.",
+        "The recommended update order runs from routine or review-required items to breaking/migration work and includes explicit backup or validation steps for stateful workloads."
+      ]
+    }
+  ]
+}
