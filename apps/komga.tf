@@ -2,7 +2,7 @@ locals {
   komga = {
     namespace = "komga"
     host      = "komga.${var.base_domain}"
-    image     = "gotson/komga:1.26.3"
+    image     = "gotson/komga:1.27.0"
     port      = 25600
 
     storage = {
@@ -213,6 +213,10 @@ resource "kubernetes_deployment" "komga" {
 
   spec {
     replicas = 1
+
+    strategy {
+      type = "Recreate"
+    }
 
     selector {
       match_labels = { app = "komga" }
