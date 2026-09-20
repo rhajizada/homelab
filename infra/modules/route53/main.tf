@@ -39,7 +39,7 @@ resource "aws_route53_record" "custom" {
   name    = each.value.fqdn
   type    = each.value.type
   ttl     = each.value.ttl
-  records = each.value.records
+  records = each.value.use_public_ip ? aws_route53_record.vpn.records : each.value.records
 }
 
 resource "aws_route53domains_registered_domain" "domain" {

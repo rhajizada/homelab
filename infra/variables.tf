@@ -43,12 +43,20 @@ variable "dns_subzone_records" {
 variable "dns_custom_records" {
   description = "Custom Route53 records to create in the base hosted zone using subdomain labels relative to base_domain"
   type = list(object({
-    name    = string
-    type    = string
-    ttl     = number
-    records = list(string)
+    name          = string
+    type          = string
+    ttl           = number
+    records       = optional(list(string), [])
+    use_public_ip = optional(bool, false)
   }))
   default = []
+
+  validation {
+    condition = alltrue([
+      for record in var.dns_custom_records : record.use_public_ip || length(record.records) > 0
+    ])
+    error_message = "Custom DNS records must specify records unless use_public_ip is true."
+  }
 }
 
 
