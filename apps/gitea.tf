@@ -2,11 +2,11 @@ locals {
   gitea = {
     repository = "https://dl.gitea.com/charts/"
     chart      = "gitea"
-    version    = "12.5.0"
+    version    = "12.7.0"
     namespace  = "gitea"
     actions = {
       chart   = "actions"
-      version = "0.0.3"
+      version = "0.1.2"
     }
 
     host = "git.${var.base_domain}"

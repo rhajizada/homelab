@@ -7,7 +7,7 @@ giteaRootURL: https://${host}
 
 statefulset:
   replicas: 1
-  actRunner:
+  runner:
     config: |
       log:
         level: info
@@ -20,6 +20,7 @@ statefulset:
       runner:
         labels:
           - "ubuntu-latest:docker://gitea/runner-images:ubuntu-latest"
+          - "ubuntu-26.04:docker://gitea/runner-images:ubuntu-26.04"
           - "ubuntu-24.04:docker://gitea/runner-images:ubuntu-24.04"
           - "ubuntu-22.04:docker://gitea/runner-images:ubuntu-22.04"
           - "ubuntu-20.04:docker://gitea/runner-images:ubuntu-20.04"
