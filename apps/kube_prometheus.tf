@@ -2,7 +2,7 @@ locals {
   monitoring = {
     repository = "https://prometheus-community.github.io/helm-charts"
     chart      = "kube-prometheus-stack"
-    version    = "82.16.0"
+    version    = "91.4.1"
     namespace  = "monitoring"
     host       = "grafana.${var.base_domain}"
     groups     = ["grafana-editors", "grafana-admins"]
