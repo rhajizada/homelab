@@ -1,6 +1,8 @@
 authentik:
   postgresql:
     password: ${postgresql_password}
+  web:
+    base_url: https://${host}
 
 postgresql:
   enabled: true
